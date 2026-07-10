@@ -313,6 +313,7 @@
         <span id="statusText">연결 중...</span>
         <button id="themeToggleBtn" class="icon-btn" aria-label="다크모드 전환">🌙</button>
         <button id="accountBtn" class="icon-btn" aria-label="아이디 전환">🙍</button>
+        <button id="deleteAccountBtn" class="icon-btn" aria-label="회원 탈퇴" title="회원 탈퇴">🗑️</button>
         <button id="dmBtn" class="icon-btn" aria-label="알림함 열기">
           🚨
           <span id="dmBadge" class="badge-dot hidden">0</span>
@@ -649,6 +650,32 @@ document.getElementById('accountBtn').addEventListener('click', async ()=>{
   localStorage.removeItem(DISPLAY_NAME_KEY);
   resetAppState();
   showStudentIdOverlay();
+});
+
+async function deleteAccountData(){
+  const targetId = STUDENT_ID;
+  await Promise.all(tasks.map(t=>deleteDoc(doc(db,"students",targetId,"tasks",t.id)).catch(()=>{})));
+  await Promise.all(stickers.map(s=>deleteDoc(doc(db,"students",targetId,"stickers",s.id)).catch(()=>{})));
+  await Promise.all(notifications.map(n=>deleteDoc(doc(db,"students",targetId,"notifications",n.id)).catch(()=>{})));
+  await deleteDoc(doc(db,"students",targetId)).catch(()=>{});
+}
+
+document.getElementById('deleteAccountBtn').addEventListener('click', async ()=>{
+  if(!dbReady) return;
+  const confirmed1 = await customConfirm(`정말로 "${STUDENT_ID}" 계정을 탈퇴할까요?\n할 일, 스티커, 알림이 모두 영구 삭제돼요.`);
+  if(!confirmed1) return;
+  const confirmed2 = await customConfirm('한 번 더 확인할게요. 삭제하면 되돌릴 수 없어요. 정말 삭제할까요?');
+  if(!confirmed2) return;
+  statusEl.textContent = "삭제 중...";
+  try{
+    await deleteAccountData();
+    localStorage.removeItem(DISPLAY_NAME_KEY);
+    resetAppState();
+    showStudentIdOverlay();
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "삭제 실패 · 다시 시도해주세요";
+  }
 });
 
 async function loadStudentData(studentId){
