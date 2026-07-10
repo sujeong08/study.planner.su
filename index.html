@@ -789,7 +789,7 @@ async function toggleTask(task){
   if(!dbReady) return;
   const nowDone = !task.completed;
   try{
-    await updateDoc(doc(db,"students",currentUser.uid,"tasks",task.id), { completed: nowDone });
+    await updateDoc(doc(db,"students",STUDENT_ID,"tasks",task.id), { completed: nowDone });
   }catch(err){ console.error(err); return; }
   if(nowDone) awardSticker(task.title, task.id);
   else removeStickerForTask(task.id);
@@ -799,7 +799,7 @@ async function deleteTask(task){
   if(!dbReady) return;
   const confirmed = await customConfirm(`"${task.title}" 할 일을 삭제할까요?`);
   if(!confirmed) return;
-  try{ await deleteDoc(doc(db,"students",currentUser.uid,"tasks",task.id)); }
+  try{ await deleteDoc(doc(db,"students",STUDENT_ID,"tasks",task.id)); }
   catch(err){ console.error(err); }
 }
 
@@ -840,7 +840,7 @@ async function removeStickerForTask(taskId){
   const matches = stickers.filter(s=>s.taskId === taskId);
   if(matches.length === 0) return;
   const latest = matches[matches.length - 1];
-  try{ await deleteDoc(doc(db,"students",currentUser.uid,"stickers",latest.id)); }
+  try{ await deleteDoc(doc(db,"students",STUDENT_ID,"stickers",latest.id)); }
   catch(err){ console.error(err); }
 }
 document.getElementById('rewardCloseBtn').addEventListener('click', ()=>{
@@ -935,7 +935,7 @@ function checkDeadlineAlerts(){
         createdAt: serverTimestamp(),
         read: false
       });
-      await updateDoc(doc(db,"students",currentUser.uid,"tasks",t.id), { notified: true });
+      await updateDoc(doc(db,"students",STUDENT_ID,"tasks",t.id), { notified: true });
     }catch(err){ console.error(err); }
   });
 }
@@ -1012,14 +1012,14 @@ function renderDMUrgent(){
 async function markNotificationRead(id){
   const n = notifications.find(x=>x.id === id);
   if(!n || n.read || !dbReady) return;
-  try{ await updateDoc(doc(db,"students",currentUser.uid,"notifications",id), { read:true }); }
+  try{ await updateDoc(doc(db,"students",STUDENT_ID,"notifications",id), { read:true }); }
   catch(err){ console.error(err); }
 }
 async function markAllNotificationsRead(){
   if(!dbReady) return;
   const unread = notifications.filter(n=>!n.read);
   await Promise.all(unread.map(n=>
-    updateDoc(doc(db,"students",currentUser.uid,"notifications",n.id), { read:true }).catch(()=>{})
+    updateDoc(doc(db,"students",STUDENT_ID,"notifications",n.id), { read:true }).catch(()=>{})
   ));
 }
 
@@ -1166,7 +1166,7 @@ function renderGoal(){
 async function setStickerGoal(value){
   stickerGoal = value;
   if(dbReady){
-    try{ await setDoc(doc(db,"students",currentUser.uid), { stickerGoal: value }, { merge:true }); }
+    try{ await setDoc(doc(db,"students",STUDENT_ID), { stickerGoal: value }, { merge:true }); }
     catch(err){ console.error(err); }
   }
   renderGoal();
@@ -1273,7 +1273,7 @@ function renderTimerStudiedLabel(){
 async function recordStudyTime(taskId, seconds){
   if(!dbReady || !taskId || seconds <= 0) return;
   try{
-    await updateDoc(doc(db,"students",currentUser.uid,"tasks",taskId), { studiedSeconds: increment(seconds) });
+    await updateDoc(doc(db,"students",STUDENT_ID,"tasks",taskId), { studiedSeconds: increment(seconds) });
   }catch(err){ console.error(err); }
 }
 
