@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>스터디 플래너</title>
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<style>
+  :root{
+    --accent:#0F9C8E;
+    --accent-dark:#0B7A70;
+    --accent-soft:#E4F5F3;
+    --danger:#E5484D;
+    --danger-soft:#FCEAEA;
+    --pri-high:#E5484D;
+    --pri-medium:#F2A93B;
+    --pri-low:#6366F1;
+
+    --bg:#F5F6F8;
+    --ink:#16181D;
+    --muted:#767C88;
+    --card:#FFFFFF;
+    --border:#E5E7EB;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 4px 10px rgba(16,24,40,.04);
+    --radius: 14px;
+  }
+  html[data-theme="dark"]{
+    --accent:#2DD4BF;
+    --accent-dark:#5EEAD4;
+    --accent-soft:#0F2E2A;
+    --danger:#F27272;
+    --danger-soft:#3A1E1F;
+
+    --bg:#131417;
+    --ink:#ECEDEF;
+    --muted:#8A8F98;
+    --card:#1C1E23;
+    --border:#2B2E34;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;overflow-x:hidden;}
+  body{
+    font-family:'Pretendard','Malgun Gothic',sans-serif;
+    color:var(--ink);
+    background:var(--bg);
+    min-height:100vh;
+    transition:background .2s ease, color .2s ease;
+  }
+  h1,h2,h3,.hand{font-family:'Pretendard','Malgun Gothic',sans-serif;font-weight:700;letter-spacing:-.01em;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:'Pretendard','Malgun Gothic',sans-serif;}
+
+  #shell{ display:flex; min-height:100vh; max-width:1100px; margin:0 auto; }
+
+  #tabrail{ display:flex; flex-direction:column; gap:2px; padding:24px 12px; width:136px; flex-shrink:0; }
+  .tab{
+    position:relative; border:none; background:transparent; color:var(--muted);
+    padding:10px 14px; font-family:'Pretendard',sans-serif; font-size:14px; font-weight:600;
+    border-radius:10px; text-align:left; letter-spacing:-.01em;
+    height:auto; transition:all .15s ease;
+  }
+  .tab:hover{ background:var(--border); }
+  .tab.active{ color:var(--accent-dark); background:var(--accent-soft); }
+
+  #main{ flex:1; padding:30px 30px 60px 22px; min-width:0; }
+  header.topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; flex-wrap:wrap; gap:10px; }
+  header.topbar h1{
+    font-size:22px; margin:0; color:var(--ink); font-weight:800;
+  }
+  .icon-btn{
+    position:relative; border:1px solid var(--border); background:var(--card);
+    width:36px;height:36px; border-radius:50%; font-size:15px;
+    display:flex;align-items:center;justify-content:center; color:var(--ink);
+  }
+  .badge-dot{
+    position:absolute;top:-3px;right:-3px;
+    background:var(--danger);
+    color:#fff;font-size:10px;font-weight:700; min-width:15px;height:15px;border-radius:999px;
+    display:flex;align-items:center;justify-content:center;padding:0 3px; border:2px solid var(--bg);
+  }
+  .badge-dot.hidden{display:none;}
+  #statusText{font-size:11px;color:var(--muted);}
+
+  .page{display:none;}
+  .page.active{display:block;}
+
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:18px; margin-bottom:18px;
+  }
+  .card h2{margin:0 0 14px 0;font-size:17px;}
+
+  #taskForm{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  #taskForm input, #taskForm select{
+    padding:9px 11px; border:1px solid var(--border); border-radius:10px; font-size:14px;
+    background:var(--bg); color:var(--ink);
+  }
+  #taskForm input[type=text]{flex:2;min-width:150px;}
+  #taskForm select{flex:1;min-width:96px;}
+  #taskForm input[type=datetime-local]{flex:1.4;min-width:180px;}
+  #taskForm input:focus, #taskForm select:focus{ outline:none; border-color:var(--accent); }
+
+  #addBtn{
+    border:none; color:#fff; width:42px;height:42px; flex:0 0 auto;
+    border-radius:50%; font-size:22px; line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--accent); transition:background .15s ease;
+  }
+  #addBtn:hover:not(:disabled){background:var(--accent-dark);}
+  #addBtn:disabled{opacity:.4;}
+  #addBtn:active{transform:scale(0.94);}
+
+  .toolbar{ display:flex; gap:8px; margin:14px 0 10px 0; flex-wrap:wrap; align-items:center; }
+  .chip{
+    border:1px solid var(--border); background:var(--card); color:var(--muted);
+    padding:6px 13px; border-radius:999px; font-size:12.5px; font-weight:500;
+  }
+  .chip.active{ border-color:transparent; color:#fff; background:var(--accent); }
+
+  #taskList{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;}
+  .task{
+    display:flex; align-items:center; gap:10px;
+    background:var(--card); border:1px solid var(--border);
+    border-left:4px solid var(--muted); border-radius:12px; padding:11px 12px;
+    transition:opacity .2s, background .3s;
+  }
+  .task.pri-high{border-left-color:var(--pri-high);}
+  .task.pri-medium{border-left-color:var(--pri-medium);}
+  .task.pri-low{border-left-color:var(--pri-low);}
+  .task.done{opacity:0.5;}
+  .task.done .task-title{text-decoration:line-through;}
+  .task.flash{animation:flashHighlight 1.6s ease;}
+  @keyframes flashHighlight{ 0%,100%{background:var(--card);} 30%{background:var(--accent-soft);} }
+  .check{
+    width:22px;height:22px;border-radius:50%; border:2px solid var(--accent);
+    background:transparent; flex-shrink:0; position:relative;
+  }
+  .check.checked{background:var(--accent);border-color:transparent;}
+  .check.checked::after{ content:"✓"; color:#fff; font-size:12px; font-weight:bold; position:absolute;inset:0;display:flex;align-items:center;justify-content:center; }
+  .task-body{flex:1;min-width:0;}
+  .task-title{font-size:14.5px;font-weight:600;}
+  .task-meta{font-size:11.5px;color:var(--muted);display:flex;gap:7px;flex-wrap:wrap;margin-top:2px;}
+  .badge{ font-size:10.5px;padding:2px 7px;border-radius:999px;font-family:'Pretendard',sans-serif;font-weight:700; }
+  .badge.high{background:#FCE8E8;color:#C22A2F;}
+  .badge.medium{background:#FDF1DC;color:#A15E0C;}
+  .badge.low{background:#E9E9FD;color:#4338CA;}
+  .badge.urgent{background:var(--danger);color:#fff;}
+  .badge.studied{background:var(--accent-soft);color:var(--accent-dark);}
+  html[data-theme="dark"] .badge.high{background:#3A2325;color:#F0A3A5;}
+  html[data-theme="dark"] .badge.medium{background:#3A2F1A;color:#F0C879;}
+  html[data-theme="dark"] .badge.low{background:#272A4A;color:#ABADF5;}
+  .delBtn{ border:none;background:transparent;color:var(--muted);font-size:16px;padding:4px 7px;border-radius:8px; }
+  .delBtn:hover{color:var(--danger);}
+  .empty{color:var(--muted);font-size:13.5px;text-align:center;padding:26px 0;}
+
+  .timer-panel{text-align:center;padding:8px 0 2px;}
+  #timerPhaseLabel{font-size:16px;font-weight:700;color:var(--accent-dark);margin-bottom:4px;}
+  .timer-display{
+    font-family:'Pretendard',sans-serif; font-size:56px; font-weight:800; letter-spacing:1px;
+    color:var(--ink); margin:4px 0;
+  }
+  .timer-sub{font-size:12.5px;color:var(--muted);margin-bottom:12px;}
+  .timer-btn-row{display:flex;gap:8px;justify-content:center;margin:12px 0 16px;flex-wrap:wrap;}
+  .timerBtn{
+    border:1px solid var(--border); background:var(--card); color:var(--ink);
+    padding:8px 18px; border-radius:10px; font-family:'Pretendard',sans-serif; font-weight:700; font-size:14px;
+  }
+  .timerBtn.primary{ border:none;color:#fff; background:var(--accent); }
+  .timerBtn.primary:hover:not(:disabled){background:var(--accent-dark);}
+  .timerBtn:disabled{opacity:.4;}
+  .timer-settings{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;font-size:12.5px;color:var(--muted);}
+  .timer-settings label{display:flex;align-items:center;gap:6px;}
+  .timer-settings input{ width:52px;padding:6px 7px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;text-align:center;background:var(--bg);color:var(--ink); }
+
+  #calHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  #calHeader h2{margin:0;}
+  #calHeader button{ border:1px solid var(--border);background:var(--card);color:var(--ink);border-radius:8px;padding:5px 11px;font-size:15px; }
+  #calGrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;min-width:0;}
+  .cal-dow{text-align:center;font-size:11.5px;color:var(--muted);padding-bottom:4px;}
+  .cal-day{
+    aspect-ratio:1/1; border-radius:10px; border:1px solid var(--border); background:var(--card);
+    padding:5px; font-size:12.5px; display:flex;flex-direction:column;gap:3px; cursor:pointer; min-width:0;
+  }
+  .cal-day.other-month{opacity:0.3;}
+  .cal-day.today{border:2px solid var(--accent);}
+  .cal-day.selected{border-color:var(--ink);}
+  .cal-dots{display:flex;gap:3px;flex-wrap:wrap;}
+  .dot{width:6px;height:6px;border-radius:50%;}
+  .dot.high{background:var(--pri-high);}
+  .dot.medium{background:var(--pri-medium);}
+  .dot.low{background:var(--pri-low);}
+
+  #goalBox{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:13px 15px; margin-bottom:14px; }
+  #goalTextRow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;flex-wrap:wrap;gap:6px;}
+  #goalText{font-size:15px;font-weight:700;color:var(--accent-dark);}
+  #goalCount{font-size:12.5px;color:var(--muted);}
+  #goalBarTrack{ width:100%;height:8px;border-radius:999px;background:var(--border);overflow:hidden;margin-bottom:12px; }
+  #goalBarFill{ height:100%;width:0%; background:var(--accent); border-radius:999px; transition:width .4s ease; }
+  #goalSetRow{display:flex;gap:8px;flex-wrap:wrap;}
+  #goalInput{ flex:1;min-width:150px;padding:8px 11px;border:1px solid var(--border);border-radius:10px;font-size:12.5px;background:var(--bg);color:var(--ink); }
+  #goalSetBtn{ border:none;color:#fff;padding:8px 15px;border-radius:10px;font-size:12.5px;font-family:'Pretendard';font-weight:700; background:var(--accent); }
+
+  #stickerBoard{ display:grid; grid-template-columns:repeat(auto-fill,minmax(76px,1fr)); gap:12px; }
+  .sticker{
+    background:var(--card); border:1px solid var(--border); border-radius:14px; aspect-ratio:1/1;
+    display:flex;align-items:center;justify-content:center; font-size:30px; transform:rotate(var(--r,0deg));
+  }
+
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;}
+  .stat-box{ background:var(--card); border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center; }
+  .stat-box .num{ font-family:'Pretendard',sans-serif;font-size:26px;font-weight:800;color:var(--accent-dark); }
+  .stat-box .label{font-size:12.5px;color:var(--muted);margin-top:2px;}
+
+  #dmOverlay{ position:fixed;inset:0;background:rgba(0,0,0,0.3); display:none;z-index:90; }
+  #dmOverlay.show{display:block;}
+  #dmPanel{
+    position:fixed;top:0;right:-360px; width:330px;max-width:88vw;height:100%;
+    background:var(--card); box-shadow:-4px 0 20px rgba(0,0,0,0.15); z-index:95;
+    transition:right .25s ease; display:flex;flex-direction:column;
+  }
+  #dmPanel.show{right:0;}
+  #dmHeader{ display:flex;align-items:center;justify-content:space-between; padding:15px 16px; border-bottom:1px solid var(--border); }
+  #dmHeader h3{margin:0;font-size:17px;}
+  #dmHeader button{ border:none;background:var(--bg);color:var(--muted); border-radius:8px;padding:5px 9px;font-size:11.5px; }
+  #dmScroll{flex:1;overflow-y:auto;}
+  .dm-section-title{ font-size:11.5px;color:var(--muted);padding:12px 16px 6px;letter-spacing:.5px; }
+  .dm-item{ display:flex;gap:11px;align-items:flex-start; padding:10px 16px; cursor:pointer; border-bottom:1px solid var(--bg); }
+  .dm-item:hover{background:var(--bg);}
+  .dm-avatar{
+    width:38px;height:38px;border-radius:50%;flex-shrink:0;
+    background:var(--accent-soft); color:var(--accent-dark);
+    display:flex;align-items:center;justify-content:center; font-size:16px;
+  }
+  .dm-body{flex:1;min-width:0;}
+  .dm-title-row{display:flex;justify-content:space-between;gap:6px;}
+  .dm-title{font-size:13.5px;font-weight:700;}
+  .dm-item.unread .dm-title{color:var(--accent-dark);}
+  .dm-time{font-size:10.5px;color:var(--muted);white-space:nowrap;}
+  .dm-msg{font-size:12.5px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .dm-dot{width:8px;height:8px;border-radius:50%;background:var(--danger);flex-shrink:0;margin-top:5px;}
+  #dmEmpty{padding:34px 18px;text-align:center;color:var(--muted);font-size:13px;}
+
+  #confirmOverlay, #rewardOverlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.35);
+    display:none;align-items:center;justify-content:center;z-index:110;
+  }
+  #confirmOverlay.show, #rewardOverlay.show{display:flex;}
+  #confirmCard, #rewardCard{
+    background:var(--card);border-radius:18px;padding:26px 30px;text-align:center;
+    box-shadow:0 10px 40px rgba(0,0,0,0.25);max-width:280px;
+  }
+  #confirmMessage{margin:0 0 16px 0;font-size:14.5px;color:var(--ink);}
+  #confirmBtnRow{display:flex;gap:10px;justify-content:center;}
+  #confirmBtnRow button{border:none;padding:8px 17px;border-radius:10px;font-size:13.5px;font-family:'Pretendard';font-weight:700;}
+  #confirmNoBtn{background:var(--bg);color:var(--muted);}
+  #confirmYesBtn{background:var(--danger);color:#fff;}
+  #rewardEmoji{font-size:56px;}
+  #rewardCard h3{margin:8px 0 4px;font-size:19px;color:var(--accent-dark);}
+  #rewardCard p{margin:0;color:var(--muted);font-size:13.5px;}
+  #rewardCard button{
+    margin-top:14px;border:none;color:#fff;padding:8px 18px;border-radius:10px;
+    background:var(--accent);font-family:'Pretendard';font-weight:700;font-size:14px;
+  }
+
+  #studentIdOverlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.4);
+    display:none;align-items:center;justify-content:center;z-index:200;
+  }
+  #studentIdOverlay.show{display:flex;}
+  #studentIdCard{
+    background:var(--card);border-radius:18px;padding:28px 26px;text-align:center;
+    box-shadow:0 10px 40px rgba(0,0,0,0.25);max-width:300px;width:90%;
+  }
+  #studentIdInput{
+    width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;
+    font-size:14px;background:var(--bg);color:var(--ink);margin-bottom:12px;
+  }
+  #studentIdInput:focus{outline:none;border-color:var(--accent);}
+  #studentIdSubmitBtn{
+    width:100%;border:none;color:#fff;padding:10px;border-radius:10px;
+    font-weight:700;font-size:14px;background:var(--accent);
+  }
+
+  @media (max-width:720px){
+    #shell{flex-direction:column;}
+    #tabrail{ flex-direction:row; width:100%; padding:10px; overflow-x:auto; gap:6px; }
+    .tab{ height:auto; width:auto; white-space:nowrap; }
+    #main{padding:16px;}
+    #taskForm input[type=text]{flex:1 1 100%;min-width:0;}
+    #taskForm input[type=datetime-local]{flex:1 1 100%;min-width:0;}
+    #taskForm select{flex:1 1 auto;min-width:0;}
+  }
+</style>
+</head>
+<body>
+
+<div id="shell">
+  <nav id="tabrail">
+    <button class="tab active" data-tab="today">오늘 할 일</button>
+    <button class="tab" data-tab="timer">타이머</button>
+    <button class="tab" data-tab="calendar">캘린더</button>
+    <button class="tab" data-tab="stickers">스티커 모음</button>
+    <button class="tab" data-tab="stats">통계</button>
+  </nav>
+
+  <main id="main">
+    <header class="topbar">
+      <h1 class="hand">스터디 플래너 ✏️</h1>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="statusText">연결 중...</span>
+        <button id="themeToggleBtn" class="icon-btn" aria-label="다크모드 전환">🌙</button>
+        <button id="accountBtn" class="icon-btn" aria-label="아이디 전환">🙍</button>
+        <button id="dmBtn" class="icon-btn" aria-label="알림함 열기">
+          🚨
+          <span id="dmBadge" class="badge-dot hidden">0</span>
+        </button>
+      </div>
+    </header>
+
+    <section class="page active" id="page-today">
+      <div class="toolbar" style="margin-top:0;">
+        <span class="chip active" data-todoview="list">📋 할 일 목록</span>
+        <span class="chip" data-todoview="add">➕ 할 일 추가</span>
+      </div>
+
+      <div class="card" id="addFormSection" style="display:none;">
+        <form id="taskForm">
+          <input type="text" id="inTitle" placeholder="할 일 (예: 수학 3단원 복습)" required />
+          <input type="text" id="inSubject" placeholder="과목" />
+          <select id="inPriority">
+            <option value="high">중요도 상</option>
+            <option value="medium" selected>중요도 중</option>
+            <option value="low">중요도 하</option>
+          </select>
+          <div style="display:flex;flex-direction:column;gap:3px;flex:1.4;min-width:170px;">
+            <label for="inStartTime" style="font-size:10.5px;color:var(--muted);">시작 시간(선택)</label>
+            <input type="datetime-local" id="inStartTime" />
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px;flex:1.4;min-width:170px;">
+            <label for="inDeadline" style="font-size:10.5px;color:var(--muted);">마감 시간</label>
+            <input type="datetime-local" id="inDeadline" required />
+          </div>
+          <button type="submit" id="addBtn" aria-label="할 일 추가" title="추가">+</button>
+        </form>
+      </div>
+
+      <div class="card" id="taskListSection">
+        <h2 class="hand">📋 할 일 목록</h2>
+        <div class="toolbar">
+          <span class="chip active" data-filter="all">전체</span>
+          <span class="chip" data-filter="active">진행중</span>
+          <span class="chip" data-filter="done">완료</span>
+        </div>
+        <ul id="taskList"></ul>
+      </div>
+    </section>
+
+    <section class="page" id="page-timer">
+      <div class="card">
+        <h2 class="hand">⏱️ 공부 타이머</h2>
+        <div class="toolbar">
+          <span class="chip active" data-timermode="pomodoro">🍅 뽀모도로</span>
+          <span class="chip" data-timermode="basic">⏱️ 기본 타이머</span>
+        </div>
+
+        <div style="margin:4px 0 16px;">
+          <label for="timerTaskSelect" style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;">📌 공부할 항목 선택 (시간 기록용)</label>
+          <select id="timerTaskSelect" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:10px;font-size:14px;background:var(--bg);color:var(--ink);">
+            <option value="">선택 안 함</option>
+          </select>
+          <div id="timerStudiedLabel" class="timer-sub" style="margin-top:8px;"></div>
+        </div>
+
+        <div id="pomodoroPanel" class="timer-panel">
+          <div id="timerPhaseLabel" class="hand">집중 시간</div>
+          <div id="pomoDisplay" class="timer-display">25:00</div>
+          <div id="pomoCycleLabel" class="timer-sub">완료한 뽀모도로 · 0회</div>
+          <div class="timer-btn-row">
+            <button id="pomoStartBtn" class="timerBtn primary">시작</button>
+            <button id="pomoPauseBtn" class="timerBtn">일시정지</button>
+            <button id="pomoStopBtn" class="timerBtn">정지</button>
+            <button id="pomoResetBtn" class="timerBtn">초기화</button>
+          </div>
+          <div class="timer-settings">
+            <label>집중 <input type="number" id="pomoWorkMin" min="1" max="90" value="25">분</label>
+            <label>휴식 <input type="number" id="pomoBreakMin" min="1" max="60" value="5">분</label>
+          </div>
+        </div>
+
+        <div id="basicPanel" class="timer-panel" style="display:none;">
+          <div id="basicDisplay" class="timer-display">10:00</div>
+          <div class="timer-settings">
+            <label>시간 설정 <input type="number" id="basicMinInput" min="1" max="180" value="10">분</label>
+          </div>
+          <div class="timer-btn-row">
+            <button id="basicStartBtn" class="timerBtn primary">시작</button>
+            <button id="basicPauseBtn" class="timerBtn">일시정지</button>
+            <button id="basicStopBtn" class="timerBtn">정지</button>
+            <button id="basicResetBtn" class="timerBtn">초기화</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-calendar">
+      <div class="card">
+        <div id="calHeader">
+          <button id="prevMonth">‹</button>
+          <h2 class="hand" id="calTitle">2026년 7월</h2>
+          <button id="nextMonth">›</button>
+        </div>
+        <div id="calGrid"></div>
+      </div>
+      <div class="card">
+        <h2 class="hand" id="selectedDayTitle">날짜를 선택하세요</h2>
+        <ul id="selectedDayList"></ul>
+      </div>
+    </section>
+
+    <section class="page" id="page-stickers">
+      <div class="card">
+        <h2 class="hand">🎀 스티커 모음판</h2>
+        <div id="goalBox">
+          <div id="goalTextRow">
+            <span class="hand" id="goalText">목표를 설정해보세요</span>
+            <span id="goalCount">0 / 0</span>
+          </div>
+          <div id="goalBarTrack"><div id="goalBarFill"></div></div>
+          <div id="goalSetRow">
+            <input type="number" id="goalInput" min="1" placeholder="목표 스티커 개수" />
+            <button id="goalSetBtn">설정</button>
+            <button id="goalResetBtn" style="border:1px solid var(--border);background:var(--card);color:var(--muted);padding:8px 15px;border-radius:10px;font-size:12.5px;font-family:'Pretendard';font-weight:700;">초기화</button>
+          </div>
+        </div>
+        <div id="stickerBoard"></div>
+        <p id="stickerEmpty" class="empty">아직 스티커가 없어요. 할 일을 완료해보세요!</p>
+      </div>
+    </section>
+
+    <section class="page" id="page-stats">
+      <div class="card">
+        <h2 class="hand">📊 통계</h2>
+        <div class="stat-grid">
+          <div class="stat-box"><div class="num" id="statTotal">0</div><div class="label">전체 할 일</div></div>
+          <div class="stat-box"><div class="num" id="statDone">0</div><div class="label">완료</div></div>
+          <div class="stat-box"><div class="num" id="statRate">0%</div><div class="label">완료율</div></div>
+          <div class="stat-box"><div class="num" id="statUrgent">0</div><div class="label">마감 임박</div></div>
+          <div class="stat-box"><div class="num" id="statStickers">0</div><div class="label">획득 스티커</div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="dmOverlay"></div>
+<aside id="dmPanel">
+  <div id="dmHeader">
+    <h3 class="hand">📩 알림함</h3>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button id="dmMarkAllBtn">모두 읽음</button>
+      <button id="dmCloseBtn">✕</button>
+    </div>
+  </div>
+  <div id="dmScroll">
+    <div class="dm-section-title">⏰ 마감임박 할 일</div>
+    <div id="dmUrgentList"></div>
+    <div class="dm-section-title">알림 기록</div>
+    <div id="dmList"></div>
+  </div>
+</aside>
+
+<div id="confirmOverlay">
+  <div id="confirmCard">
+    <p id="confirmMessage">정말 삭제할까요?</p>
+    <div id="confirmBtnRow">
+      <button id="confirmNoBtn">취소</button>
+      <button id="confirmYesBtn">삭제</button>
+    </div>
+  </div>
+</div>
+
+<div id="rewardOverlay">
+  <div id="rewardCard">
+    <div id="rewardEmoji">⭐</div>
+    <h3>잘했어요!</h3>
+    <p id="rewardTaskName">할 일을 완료했어요</p>
+    <button id="rewardCloseBtn">닫기</button>
+  </div>
+</div>
+
+<div id="studentIdOverlay">
+  <div id="studentIdCard">
+    <h3 class="hand" style="margin:0 0 6px;">👋 반가워요!</h3>
+    <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">이름이나 학번, 비밀번호를 입력하면<br>나만의 할 일이 안전하게 저장돼요.</p>
+    <input id="studentIdInput" type="text" placeholder="예: 홍길동 또는 30214" autocomplete="username" />
+    <input id="studentPwInput" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;background:var(--bg);color:var(--ink);margin-bottom:10px;" />
+    <p id="authErrorText" style="display:none;color:var(--danger);font-size:12.5px;margin:0 0 10px;text-align:left;"></p>
+    <div style="display:flex;gap:8px;">
+      <button id="studentLoginBtn" style="flex:1;border:none;color:#fff;padding:10px;border-radius:10px;font-weight:700;font-size:14px;background:var(--accent);">로그인</button>
+      <button id="studentSignupBtn" style="flex:1;border:1px solid var(--border);background:var(--card);color:var(--ink);padding:10px;border-radius:10px;font-weight:700;font-size:14px;">회원가입</button>
+    </div>
+    <p style="color:var(--muted);font-size:11.5px;margin:12px 0 0;">처음이라면 [회원가입], 이미 만들었다면 [로그인]을 눌러주세요.</p>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
+  onSnapshot, query, orderBy, serverTimestamp, increment
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyANA-lTFGboIfklqQewlVk49GUQ_Am33aE",
+  authDomain: "garim-study-planner.firebaseapp.com",
+  projectId: "garim-study-planner",
+  storageBucket: "garim-study-planner.firebasestorage.app",
+  messagingSenderId: "1048447885260",
+  appId: "1:1048447885260:web:935234dd0c96860583c769"
+};
+
+// 참고: 이 방식은 Firebase Authentication을 쓰지 않고, Firestore 문서에 저장된
+// 비밀번호(해시)와 입력값을 브라우저에서 직접 비교해요. 설정은 간단하지만,
+// 개발자도구를 쓸 줄 아는 사람은 이 검사를 우회해서 다른 사람 데이터를 볼 수 있어요.
+// 같은 반 친구들끼리 실수로 서로 데이터를 안 섞이게 하는 정도의 "약한 잠금"이라고 생각해주세요.
+function hashPassword(str){
+  let h = 0;
+  for(let i=0;i<str.length;i++){
+    h = (Math.imul(31, h) + str.charCodeAt(i)) >>> 0;
+  }
+  return 'h' + h.toString(36);
+}
+
+const DISPLAY_NAME_KEY = "planner_display_name"; // 로그인 폼에 이름을 미리 채워주기 위한 용도
+let STUDENT_ID = ""; // 화면 표시 + Firestore 문서 경로(students/{STUDENT_ID})로 함께 사용
+const statusEl = document.getElementById('statusText');
+const addBtn = document.getElementById('addBtn');
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let tasksCol, stickersCol, notificationsCol;
+let tasks = [];
+let stickers = [];
+let notifications = [];
+let dbReady = false;
+let unsubscribers = [];
+
+addBtn.disabled = true;
+
+function sanitizeStudentId(raw){
+  return raw.trim().replace(/[\/\s]+/g, '_').slice(0, 40);
+}
+
+function resetAppState(){
+  unsubscribers.forEach(u=>{ try{ u(); }catch(err){} });
+  unsubscribers = [];
+  tasks = []; stickers = []; notifications = [];
+  dbReady = false;
+  addBtn.disabled = true;
+  statusEl.textContent = "연결 중...";
+}
+
+function showStudentIdOverlay(){
+  const input = document.getElementById('studentIdInput');
+  const pwInput = document.getElementById('studentPwInput');
+  input.value = localStorage.getItem(DISPLAY_NAME_KEY) || '';
+  pwInput.value = '';
+  showAuthError('');
+  document.getElementById('studentIdOverlay').classList.add('show');
+  setTimeout(()=> (input.value ? pwInput : input).focus(), 50);
+}
+function hideStudentIdOverlay(){
+  document.getElementById('studentIdOverlay').classList.remove('show');
+}
+function showAuthError(msg){
+  const el = document.getElementById('authErrorText');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+function readAuthForm(){
+  const raw = document.getElementById('studentIdInput').value;
+  const pw = document.getElementById('studentPwInput').value;
+  const id = sanitizeStudentId(raw);
+  if(!id){ showAuthError('이름이나 학번을 입력해주세요.'); return null; }
+  if(!pw || pw.length < 4){ showAuthError('비밀번호는 4자 이상 입력해주세요.'); return null; }
+  return { id, pw };
+}
+
+async function handleSignup(){
+  const form = readAuthForm();
+  if(!form) return;
+  showAuthError('');
+  try{
+    const ref = doc(db,"students",form.id);
+    const snap = await getDoc(ref);
+    if(snap.exists()){
+      showAuthError('이미 사용 중인 이름/학번이에요. [로그인]을 눌러주세요.');
+      return;
+    }
+    await setDoc(ref, { studentId: form.id, passwordHash: hashPassword(form.pw), createdAt: serverTimestamp() });
+    localStorage.setItem(DISPLAY_NAME_KEY, form.id);
+    STUDENT_ID = form.id;
+    hideStudentIdOverlay();
+    resetAppState();
+    loadStudentData(form.id);
+  }catch(err){
+    console.error(err);
+    showAuthError(`문제가 발생했어요 (${err.code || err.message}).`);
+  }
+}
+async function handleLogin(){
+  const form = readAuthForm();
+  if(!form) return;
+  showAuthError('');
+  try{
+    const ref = doc(db,"students",form.id);
+    const snap = await getDoc(ref);
+    if(!snap.exists()){
+      // 계정이 없으면 그 자리에서 바로 회원가입으로 이어줌
+      await handleSignup();
+      return;
+    }
+    if(snap.data().passwordHash !== hashPassword(form.pw)){
+      showAuthError('비밀번호가 올바르지 않아요.');
+      return;
+    }
+    localStorage.setItem(DISPLAY_NAME_KEY, form.id);
+    STUDENT_ID = form.id;
+    hideStudentIdOverlay();
+    resetAppState();
+    loadStudentData(form.id);
+  }catch(err){
+    console.error(err);
+    showAuthError(`문제가 발생했어요 (${err.code || err.message}).`);
+  }
+}
+document.getElementById('studentSignupBtn').addEventListener('click', handleSignup);
+document.getElementById('studentLoginBtn').addEventListener('click', handleLogin);
+document.getElementById('studentPwInput').addEventListener('keydown', (e)=>{ if(e.key === 'Enter') handleLogin(); });
+
+document.getElementById('accountBtn').addEventListener('click', async ()=>{
+  const confirmed = await customConfirm(`현재 아이디: "${STUDENT_ID}"\n다른 이름/학번으로 전환할까요? (지금 데이터는 그대로 안전하게 남아있어요)`);
+  if(!confirmed) return;
+  localStorage.removeItem(DISPLAY_NAME_KEY);
+  resetAppState();
+  showStudentIdOverlay();
+});
+
+async function loadStudentData(studentId){
+  statusEl.textContent = "연결 중...";
+  try {
+    tasksCol = collection(db, "students", studentId, "tasks");
+    stickersCol = collection(db, "students", studentId, "stickers");
+    notificationsCol = collection(db, "students", studentId, "notifications");
+
+    unsubscribers.push(onSnapshot(query(tasksCol, orderBy('createdAt','asc')), (snap)=>{
+      tasks = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      renderAll();
+    }, (err)=>{ console.error(err); statusEl.textContent = 'Firestore 오류'; }));
+
+    unsubscribers.push(onSnapshot(query(stickersCol, orderBy('earnedAt','asc')), (snap)=>{
+      stickers = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      renderStickers(); renderStats();
+    }, (err)=>console.error(err)));
+
+    unsubscribers.push(onSnapshot(query(notificationsCol, orderBy('createdAt','asc')), (snap)=>{
+      notifications = snap.docs.map(d=>({ id:d.id, ...d.data(), createdAt: d.data().createdAt?.toMillis?.() || Date.now() }));
+      renderDM();
+    }, (err)=>console.error(err)));
+
+    const studentSnap = await getDoc(doc(db,"students",studentId));
+    if(studentSnap.exists() && studentSnap.data().stickerGoal){
+      stickerGoal = studentSnap.data().stickerGoal;
+      renderGoal();
+    }
+
+    dbReady = true;
+    addBtn.disabled = false;
+    statusEl.textContent = `연결됨 · ${STUDENT_ID}`;
+  } catch (e) {
+    console.error("Firebase 연결 실패:", e);
+    statusEl.textContent = "연결 실패 · 새로고침 해주세요";
+  }
+}
+
+showStudentIdOverlay();
+
+/* ============ 다크모드 ============ */
+const themeBtn = document.getElementById('themeToggleBtn');
+(function initTheme(){
+  const saved = localStorage.getItem('planner_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  themeBtn.textContent = saved === 'dark' ? '☀️' : '🌙';
+})();
+themeBtn.addEventListener('click', ()=>{
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('planner_theme', next);
+  themeBtn.textContent = next === 'dark' ? '☀️' : '🌙';
+});
+
+/* ============ TAB NAVIGATION ============ */
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('page-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab === 'calendar') renderCalendar();
+  });
+});
+
+function goToTodayAndFlash(taskId){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelector('.tab[data-tab="today"]').classList.add('active');
+  document.getElementById('page-today').classList.add('active');
+  document.querySelectorAll('.chip[data-todoview]').forEach(c=>c.classList.remove('active'));
+  document.querySelector('.chip[data-todoview="list"]').classList.add('active');
+  document.getElementById('addFormSection').style.display = 'none';
+  document.getElementById('taskListSection').style.display = '';
+  closeDM();
+  setTimeout(()=>{
+    const el = document.querySelector(`.task[data-id="${taskId}"]`);
+    if(el){
+      el.scrollIntoView({ behavior:'smooth', block:'center' });
+      el.classList.add('flash');
+      setTimeout(()=>el.classList.remove('flash'), 1600);
+    }
+  }, 80);
+}
+
+/* ============ FILTER CHIPS ============ */
+let currentFilter = "all";
+document.querySelectorAll('.chip[data-filter]').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('.chip[data-filter]').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    currentFilter = chip.dataset.filter;
+    renderTasks();
+  });
+});
+
+/* ============ 할 일 추가 / 목록 화면 전환 ============ */
+document.querySelectorAll('.chip[data-todoview]').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('.chip[data-todoview]').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    const view = chip.dataset.todoview;
+    document.getElementById('addFormSection').style.display = (view === 'add') ? '' : 'none';
+    document.getElementById('taskListSection').style.display = (view === 'list') ? '' : 'none';
+  });
+});
+
+/* ============ ADD TASK ============ */
+document.getElementById('taskForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  if(!dbReady) return;
+  const title = document.getElementById('inTitle').value.trim();
+  const subject = document.getElementById('inSubject').value.trim();
+  const priority = document.getElementById('inPriority').value;
+  const startTime = document.getElementById('inStartTime').value;
+  const deadline = document.getElementById('inDeadline').value;
+  if(!title || !deadline) return;
+
+  try{
+    await addDoc(tasksCol, {
+      title, subject, priority,
+      startTime: startTime ? new Date(startTime).toISOString() : null,
+      deadline: new Date(deadline).toISOString(),
+      completed: false,
+      notified: false,
+      createdAt: serverTimestamp()
+    });
+  }catch(err){ console.error(err); }
+
+  e.target.reset();
+  document.getElementById('inPriority').value = 'medium';
+});
+
+/* ============ TASK ACTIONS ============ */
+async function toggleTask(task){
+  if(!dbReady) return;
+  const nowDone = !task.completed;
+  try{
+    await updateDoc(doc(db,"students",currentUser.uid,"tasks",task.id), { completed: nowDone });
+  }catch(err){ console.error(err); return; }
+  if(nowDone) awardSticker(task.title, task.id);
+  else removeStickerForTask(task.id);
+}
+
+async function deleteTask(task){
+  if(!dbReady) return;
+  const confirmed = await customConfirm(`"${task.title}" 할 일을 삭제할까요?`);
+  if(!confirmed) return;
+  try{ await deleteDoc(doc(db,"students",currentUser.uid,"tasks",task.id)); }
+  catch(err){ console.error(err); }
+}
+
+function customConfirm(message){
+  return new Promise(resolve=>{
+    const overlay = document.getElementById('confirmOverlay');
+    document.getElementById('confirmMessage').textContent = message;
+    overlay.classList.add('show');
+    const yesBtn = document.getElementById('confirmYesBtn');
+    const noBtn = document.getElementById('confirmNoBtn');
+    function cleanup(result){
+      overlay.classList.remove('show');
+      yesBtn.removeEventListener('click', onYes);
+      noBtn.removeEventListener('click', onNo);
+      resolve(result);
+    }
+    function onYes(){ cleanup(true); }
+    function onNo(){ cleanup(false); }
+    yesBtn.addEventListener('click', onYes);
+    noBtn.addEventListener('click', onNo);
+  });
+}
+
+/* ============ STICKER REWARD ============ */
+async function awardSticker(title, taskId){
+  const STICKER_EMOJIS = ["⭐","🌟","✨","🎀","🍀","🌈","🎈","💐","🧸","🍒","🍓","🎉","🩷","🦋","🍩","🌸"];
+  const emoji = STICKER_EMOJIS[Math.floor(Math.random()*STICKER_EMOJIS.length)];
+  if(dbReady){
+    try{ await addDoc(stickersCol, { emoji, taskTitle: title, taskId: taskId || null, earnedAt: serverTimestamp() }); }
+    catch(err){ console.error(err); }
+  }
+  document.getElementById('rewardEmoji').textContent = emoji;
+  document.getElementById('rewardTaskName').textContent = `"${title}" 완료!`;
+  document.getElementById('rewardOverlay').classList.add('show');
+}
+async function removeStickerForTask(taskId){
+  if(!dbReady || !taskId) return;
+  const matches = stickers.filter(s=>s.taskId === taskId);
+  if(matches.length === 0) return;
+  const latest = matches[matches.length - 1];
+  try{ await deleteDoc(doc(db,"students",currentUser.uid,"stickers",latest.id)); }
+  catch(err){ console.error(err); }
+}
+document.getElementById('rewardCloseBtn').addEventListener('click', ()=>{
+  document.getElementById('rewardOverlay').classList.remove('show');
+});
+
+/* ============ SORT / RENDER TASKS ============ */
+function priorityRank(p){ return p==='high'?0 : p==='medium'?1 : 2; }
+function sortedTasks(list){
+  return [...list].sort((a,b)=>{
+    if(a.completed !== b.completed) return a.completed ? 1 : -1;
+    const pr = priorityRank(a.priority) - priorityRank(b.priority);
+    if(pr !== 0) return pr;
+    return new Date(a.deadline) - new Date(b.deadline);
+  });
+}
+function isUrgent(task){
+  if(task.completed) return false;
+  const diffH = (new Date(task.deadline) - new Date()) / 3600000;
+  return diffH <= 24 && diffH >= -1;
+}
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function renderTasks(){
+  const listEl = document.getElementById('taskList');
+  let list = sortedTasks(tasks);
+  if(currentFilter === 'active') list = list.filter(t=>!t.completed);
+  if(currentFilter === 'done') list = list.filter(t=>t.completed);
+
+  listEl.innerHTML = '';
+  if(list.length === 0){
+    listEl.innerHTML = '<p class="empty">할 일이 없어요. 위에서 추가해보세요!</p>';
+  }
+  list.forEach(task=>{
+    const li = document.createElement('li');
+    li.className = `task pri-${task.priority} ${task.completed?'done':''}`;
+    li.dataset.id = task.id;
+    const d = new Date(task.deadline);
+    const pad2 = n => String(n).padStart(2,'0');
+    let dateStr;
+    if(task.startTime){
+      const s = new Date(task.startTime);
+      const sameDay = s.toDateString() === d.toDateString();
+      dateStr = sameDay
+        ? `${s.getMonth()+1}/${s.getDate()} ${pad2(s.getHours())}:${pad2(s.getMinutes())}~${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+        : `${s.getMonth()+1}/${s.getDate()} ${pad2(s.getHours())}:${pad2(s.getMinutes())} ~ ${d.getMonth()+1}/${d.getDate()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    } else {
+      dateStr = `${d.getMonth()+1}/${d.getDate()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+    li.innerHTML = `
+      <button class="check ${task.completed?'checked':''}"></button>
+      <div class="task-body">
+        <div class="task-title">${escapeHtml(task.title)}</div>
+        <div class="task-meta">
+          ${task.subject ? `<span>${escapeHtml(task.subject)}</span>` : ''}
+          <span>📅 ${dateStr}</span>
+          <span class="badge ${task.priority}">${task.priority==='high'?'상':task.priority==='medium'?'중':'하'}</span>
+          ${isUrgent(task) ? '<span class="badge urgent">마감임박</span>' : ''}
+          ${task.studiedSeconds ? `<span style="color:var(--muted);">🕒 ${Math.round(task.studiedSeconds/60)}분</span>` : ''}
+        </div>
+      </div>
+      <button class="delBtn" title="삭제">✕</button>
+    `;
+    li.querySelector('.check').addEventListener('click', ()=>toggleTask(task));
+    li.querySelector('.delBtn').addEventListener('click', ()=> deleteTask(task));
+    listEl.appendChild(li);
+  });
+
+  renderStats();
+  renderTimerTaskSelect();
+}
+
+/* ============ 알림 발생 체크 (DM 알림함 기록용) ============ */
+function checkDeadlineAlerts(){
+  if(!dbReady) return;
+  tasks.filter(isUrgent).forEach(async t=>{
+    if(t.notified) return;
+    if(("Notification" in window)){
+      if(Notification.permission === "default") Notification.requestPermission();
+      if(Notification.permission === "granted"){
+        new Notification("⏰ 마감 임박!", { body: `${t.title} - 24시간 이내 마감입니다.` });
+      }
+    }
+    try{
+      await addDoc(notificationsCol, {
+        taskTitle: t.title,
+        message: '마감이 얼마 남지 않았어요. 서둘러 주세요!',
+        createdAt: serverTimestamp(),
+        read: false
+      });
+      await updateDoc(doc(db,"students",currentUser.uid,"tasks",t.id), { notified: true });
+    }catch(err){ console.error(err); }
+  });
+}
+
+/* ============ DM 알림함 ============ */
+function timeAgo(ts){
+  const diffSec = Math.floor((Date.now() - ts) / 1000);
+  if(diffSec < 60) return '방금 전';
+  if(diffSec < 3600) return Math.floor(diffSec/60) + '분 전';
+  if(diffSec < 86400) return Math.floor(diffSec/3600) + '시간 전';
+  return Math.floor(diffSec/86400) + '일 전';
+}
+
+function renderDM(){
+  renderDMUrgent();
+  const listEl = document.getElementById('dmList');
+  const badge = document.getElementById('dmBadge');
+  const sorted = [...notifications].sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+  const unreadCount = sorted.filter(n=>!n.read).length + tasks.filter(isUrgent).length;
+
+  badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
+  badge.classList.toggle('hidden', unreadCount === 0);
+
+  if(sorted.length === 0){
+    listEl.innerHTML = '<div id="dmEmpty">알림 기록이 없어요.</div>';
+    return;
+  }
+  listEl.innerHTML = sorted.map(n=>`
+    <div class="dm-item ${n.read?'':'unread'}" data-id="${n.id}" data-kind="log">
+      <div class="dm-avatar">⏰</div>
+      <div class="dm-body">
+        <div class="dm-title-row">
+          <span class="dm-title">${escapeHtml(n.taskTitle||'')}</span>
+          <span class="dm-time">${timeAgo(n.createdAt || Date.now())}</span>
+        </div>
+        <div class="dm-msg">${escapeHtml(n.message||'')}</div>
+      </div>
+      ${n.read ? '' : '<div class="dm-dot"></div>'}
+    </div>
+  `).join('');
+  listEl.querySelectorAll('.dm-item').forEach(el=>{
+    el.addEventListener('click', ()=> markNotificationRead(el.dataset.id));
+  });
+}
+
+function renderDMUrgent(){
+  const box = document.getElementById('dmUrgentList');
+  const urgentTasks = sortedTasks(tasks.filter(isUrgent));
+  if(urgentTasks.length === 0){
+    box.innerHTML = '<div style="padding:6px 16px 10px;color:var(--muted);font-size:12.5px;">마감 임박한 할 일이 없어요.</div>';
+    return;
+  }
+  box.innerHTML = urgentTasks.map(t=>{
+    const d = new Date(t.deadline);
+    const dateStr = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    return `
+      <div class="dm-item" data-goto="${t.id}">
+        <div class="dm-avatar">🔥</div>
+        <div class="dm-body">
+          <div class="dm-title-row">
+            <span class="dm-title">${escapeHtml(t.title)}</span>
+            <span class="dm-time">${dateStr}</span>
+          </div>
+          <div class="dm-msg">눌러서 할 일로 이동하기</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  box.querySelectorAll('.dm-item').forEach(el=>{
+    el.addEventListener('click', ()=> goToTodayAndFlash(el.dataset.goto));
+  });
+}
+
+async function markNotificationRead(id){
+  const n = notifications.find(x=>x.id === id);
+  if(!n || n.read || !dbReady) return;
+  try{ await updateDoc(doc(db,"students",currentUser.uid,"notifications",id), { read:true }); }
+  catch(err){ console.error(err); }
+}
+async function markAllNotificationsRead(){
+  if(!dbReady) return;
+  const unread = notifications.filter(n=>!n.read);
+  await Promise.all(unread.map(n=>
+    updateDoc(doc(db,"students",currentUser.uid,"notifications",n.id), { read:true }).catch(()=>{})
+  ));
+}
+
+document.getElementById('dmBtn').addEventListener('click', ()=>{
+  document.getElementById('dmPanel').classList.add('show');
+  document.getElementById('dmOverlay').classList.add('show');
+});
+function closeDM(){
+  document.getElementById('dmPanel').classList.remove('show');
+  document.getElementById('dmOverlay').classList.remove('show');
+}
+document.getElementById('dmCloseBtn').addEventListener('click', closeDM);
+document.getElementById('dmOverlay').addEventListener('click', closeDM);
+document.getElementById('dmMarkAllBtn').addEventListener('click', markAllNotificationsRead);
+
+/* ============ CALENDAR ============ */
+let calDate = new Date();
+let selectedDay = null;
+
+function renderCalendar(){
+  const year = calDate.getFullYear();
+  const month = calDate.getMonth();
+  document.getElementById('calTitle').textContent = `${year}년 ${month+1}월`;
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  ['일','월','화','수','목','금','토'].forEach(d=>{
+    const el = document.createElement('div');
+    el.className = 'cal-dow';
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const firstDay = new Date(year, month, 1);
+  const startOffset = firstDay.getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+  const todayStr = new Date().toDateString();
+
+  const cells = [];
+  for(let i=startOffset-1;i>=0;i--){
+    cells.push({ day: daysInPrevMonth-i, other:true, dateObj:new Date(year, month-1, daysInPrevMonth-i) });
+  }
+  for(let d=1; d<=daysInMonth; d++){
+    cells.push({ day:d, other:false, dateObj:new Date(year, month, d) });
+  }
+  while(cells.length % 7 !== 0){
+    const nextDay = cells.length - (startOffset+daysInMonth) + 1;
+    cells.push({ day: nextDay, other:true, dateObj:new Date(year, month+1, nextDay) });
+  }
+
+  cells.forEach(cell=>{
+    const el = document.createElement('div');
+    el.className = 'cal-day' + (cell.other?' other-month':'') + (cell.dateObj.toDateString()===todayStr?' today':'');
+    if(selectedDay && cell.dateObj.toDateString() === selectedDay.toDateString()){
+      el.classList.add('selected');
+    }
+    const dayTasks = tasks.filter(t=> new Date(t.deadline).toDateString() === cell.dateObj.toDateString());
+    el.innerHTML = `<span>${cell.day}</span><div class="cal-dots">${dayTasks.slice(0,6).map(t=>`<span class="dot ${t.priority}"></span>`).join('')}</div>`;
+    el.addEventListener('click', ()=>{
+      selectedDay = cell.dateObj;
+      renderCalendar();
+      renderSelectedDay();
+    });
+    grid.appendChild(el);
+  });
+}
+
+function renderSelectedDay(){
+  const titleEl = document.getElementById('selectedDayTitle');
+  const listEl = document.getElementById('selectedDayList');
+  if(!selectedDay){
+    titleEl.textContent = '날짜를 선택하세요';
+    listEl.innerHTML = '';
+    return;
+  }
+  titleEl.textContent = `${selectedDay.getMonth()+1}월 ${selectedDay.getDate()}일 할 일`;
+  const dayTasks = sortedTasks(tasks.filter(t=>new Date(t.deadline).toDateString() === selectedDay.toDateString()));
+  listEl.innerHTML = dayTasks.length ? dayTasks.map(t=>{
+    const d = new Date(t.deadline);
+    return `<li style="margin-bottom:6px;">${t.completed?'✅':'⬜'} ${escapeHtml(t.title)} <span style="color:var(--muted);font-size:12px;">(${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')})</span></li>`;
+  }).join('') : '<p class="empty">이 날짜에 등록된 할 일이 없어요.</p>';
+}
+
+document.getElementById('prevMonth').addEventListener('click', ()=>{
+  calDate = new Date(calDate.getFullYear(), calDate.getMonth()-1, 1);
+  renderCalendar();
+});
+document.getElementById('nextMonth').addEventListener('click', ()=>{
+  calDate = new Date(calDate.getFullYear(), calDate.getMonth()+1, 1);
+  renderCalendar();
+});
+
+/* ============ STICKERS + 목표 ============ */
+let stickerGoal = 0;
+let goalCelebratedFor = parseInt(localStorage.getItem('planner_goal_celebrated') || '0', 10);
+
+function renderStickers(){
+  renderGoal();
+  const board = document.getElementById('stickerBoard');
+  const emptyMsg = document.getElementById('stickerEmpty');
+  board.innerHTML = '';
+  if(stickers.length === 0){ emptyMsg.style.display = 'block'; return; }
+  emptyMsg.style.display = 'none';
+  stickers.slice().reverse().forEach(s=>{
+    const div = document.createElement('div');
+    div.className = 'sticker';
+    div.style.setProperty('--r', (Math.random()*10-5)+'deg');
+    div.textContent = s.emoji;
+    board.appendChild(div);
+  });
+}
+
+function renderGoal(){
+  const textEl = document.getElementById('goalText');
+  const countEl = document.getElementById('goalCount');
+  const fillEl = document.getElementById('goalBarFill');
+  const count = stickers.length;
+
+  if(!stickerGoal || stickerGoal <= 0){
+    textEl.textContent = '목표를 설정해보세요';
+    countEl.textContent = `스티커 ${count}개 모음`;
+    fillEl.style.width = '0%';
+    return;
+  }
+  const pct = Math.min(100, Math.round((count / stickerGoal) * 100));
+  fillEl.style.width = pct + '%';
+  countEl.textContent = `${count} / ${stickerGoal}`;
+
+  if(count >= stickerGoal){
+    textEl.textContent = '🎉 목표 달성!';
+    if(goalCelebratedFor !== stickerGoal){
+      goalCelebratedFor = stickerGoal;
+      localStorage.setItem('planner_goal_celebrated', String(stickerGoal));
+      document.getElementById('rewardEmoji').textContent = '🏆';
+      document.getElementById('rewardTaskName').textContent = `스티커 ${stickerGoal}개 목표를 달성했어요! 정말 잘했어요 🎉`;
+      document.getElementById('rewardOverlay').classList.add('show');
+    }
+  } else {
+    textEl.textContent = `목표까지 ${stickerGoal - count}개 남았어요`;
+  }
+}
+
+async function setStickerGoal(value){
+  stickerGoal = value;
+  if(dbReady){
+    try{ await setDoc(doc(db,"students",currentUser.uid), { stickerGoal: value }, { merge:true }); }
+    catch(err){ console.error(err); }
+  }
+  renderGoal();
+}
+document.getElementById('goalSetBtn').addEventListener('click', ()=>{
+  const val = parseInt(document.getElementById('goalInput').value, 10);
+  const countEl = document.getElementById('goalCount');
+  if(!val || val <= 0){
+    countEl.textContent = '1 이상의 숫자를 입력해주세요';
+    countEl.style.color = 'var(--danger)';
+    return;
+  }
+  countEl.style.color = '';
+  setStickerGoal(val);
+  document.getElementById('goalInput').value = '';
+});
+
+document.getElementById('goalResetBtn').addEventListener('click', async ()=>{
+  const confirmed = await customConfirm('목표를 초기화할까요? (모은 스티커는 그대로 남아요)');
+  if(!confirmed) return;
+  setStickerGoal(0);
+  document.getElementById('goalInput').value = '';
+});
+
+/* ============ STATS ============ */
+function renderStats(){
+  const total = tasks.length;
+  const done = tasks.filter(t=>t.completed).length;
+  const rate = total ? Math.round((done/total)*100) : 0;
+  const urgent = tasks.filter(isUrgent).length;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statRate').textContent = rate + '%';
+  document.getElementById('statUrgent').textContent = urgent;
+  document.getElementById('statStickers').textContent = stickers.length;
+}
+
+/* ============ MASTER RENDER ============ */
+function renderAll(){
+  renderTasks();
+  renderCalendar();
+  renderSelectedDay();
+  renderStickers();
+  renderStats();
+  renderDM();
+  checkDeadlineAlerts();
+}
+
+setInterval(()=>{ renderTasks(); renderDM(); }, 60000);
+
+(function setDefaultDeadline(){
+  const dt = new Date(Date.now() + 24*3600000);
+  dt.setMinutes(0);
+  const pad = n => String(n).padStart(2,'0');
+  const val = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:00`;
+  document.getElementById('inDeadline').value = val;
+})();
+
+/* ============ TIMER (뽀모도로 / 기본 타이머) ============ */
+document.querySelectorAll('.chip[data-timermode]').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('.chip[data-timermode]').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    const mode = chip.dataset.timermode;
+    document.getElementById('pomodoroPanel').style.display = (mode === 'pomodoro') ? '' : 'none';
+    document.getElementById('basicPanel').style.display = (mode === 'basic') ? '' : 'none';
+  });
+});
+
+function formatTime(totalSec){
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function showTimerDoneCelebration(title){
+  document.getElementById('rewardEmoji').textContent = '⏰';
+  document.getElementById('rewardTaskName').textContent = title;
+  document.getElementById('rewardOverlay').classList.add('show');
+}
+
+/* ---- 타이머용 할 일 선택 & 공부시간 기록 ---- */
+const timerTaskSelectEl = document.getElementById('timerTaskSelect');
+const timerStudiedLabelEl = document.getElementById('timerStudiedLabel');
+
+function renderTimerTaskSelect(){
+  if(!timerTaskSelectEl) return;
+  const prevValue = timerTaskSelectEl.value;
+  const activeTasks = sortedTasks(tasks.filter(t=>!t.completed));
+  timerTaskSelectEl.innerHTML = '<option value="">선택 안 함</option>' +
+    activeTasks.map(t=>`<option value="${t.id}">${escapeHtml(t.title)}</option>`).join('');
+  if(activeTasks.some(t=>t.id === prevValue)) timerTaskSelectEl.value = prevValue;
+  renderTimerStudiedLabel();
+}
+
+function renderTimerStudiedLabel(){
+  if(!timerStudiedLabelEl) return;
+  const taskId = timerTaskSelectEl.value;
+  if(!taskId){ timerStudiedLabelEl.textContent = ''; return; }
+  const task = tasks.find(t=>t.id === taskId);
+  const seconds = (task && task.studiedSeconds) || 0;
+  timerStudiedLabelEl.textContent = seconds > 0 ? `지금까지 이 할 일에 ${Math.round(seconds/60)}분 공부했어요` : '';
+}
+
+async function recordStudyTime(taskId, seconds){
+  if(!dbReady || !taskId || seconds <= 0) return;
+  try{
+    await updateDoc(doc(db,"students",currentUser.uid,"tasks",taskId), { studiedSeconds: increment(seconds) });
+  }catch(err){ console.error(err); }
+}
+
+if(timerTaskSelectEl){
+  timerTaskSelectEl.addEventListener('change', renderTimerStudiedLabel);
+}
+
+let pomoPhase = 'work';
+let pomoRemaining = 25 * 60;
+let pomoInterval = null;
+let pomoCycles = 0;
+let pomoWorkSessionMinutes = 25;
+const pomoDisplayEl = document.getElementById('pomoDisplay');
+const pomoPhaseLabelEl = document.getElementById('timerPhaseLabel');
+const pomoCycleLabelEl = document.getElementById('pomoCycleLabel');
+const pomoWorkMinInput = document.getElementById('pomoWorkMin');
+const pomoBreakMinInput = document.getElementById('pomoBreakMin');
+const pomoStartBtn = document.getElementById('pomoStartBtn');
+
+function renderPomo(){
+  pomoDisplayEl.textContent = formatTime(pomoRemaining);
+  pomoPhaseLabelEl.textContent = pomoPhase === 'work' ? '🍅 집중 시간' : '☕ 휴식 시간';
+  pomoCycleLabelEl.textContent = `완료한 뽀모도로 · ${pomoCycles}회`;
+}
+function startPomo(){
+  if(pomoInterval) return;
+  if(pomoPhase === 'work') pomoWorkSessionMinutes = parseInt(pomoWorkMinInput.value,10) || 25;
+  pomoStartBtn.disabled = true;
+  pomoInterval = setInterval(()=>{
+    pomoRemaining--;
+    if(pomoRemaining < 0){
+      if(pomoPhase === 'work'){
+        pomoCycles++;
+        recordStudyTime(timerTaskSelectEl ? timerTaskSelectEl.value : '', pomoWorkSessionMinutes*60);
+        pomoPhase = 'break';
+        pomoRemaining = (parseInt(pomoBreakMinInput.value,10) || 5) * 60;
+        showTimerDoneCelebration('🍅 한 뽀모도로 완료! 잠깐 쉬어가요 ☕');
+        awardSticker('뽀모도로 집중 완료');
+      } else {
+        pomoPhase = 'work';
+        pomoRemaining = (parseInt(pomoWorkMinInput.value,10) || 25) * 60;
+        clearInterval(pomoInterval); pomoInterval = null; pomoStartBtn.disabled = false;
+        showTimerDoneCelebration('☕ 휴식 끝! 다시 집중해볼까요? 🍅');
+      }
+    }
+    renderPomo();
+  }, 1000);
+}
+function pausePomo(){ clearInterval(pomoInterval); pomoInterval = null; pomoStartBtn.disabled = false; }
+function stopPomo(){
+  clearInterval(pomoInterval); pomoInterval = null; pomoStartBtn.disabled = false;
+  if(pomoPhase === 'work'){
+    const totalSec = pomoWorkSessionMinutes * 60;
+    const elapsed = totalSec - Math.max(pomoRemaining, 0);
+    if(elapsed > 0){
+      recordStudyTime(timerTaskSelectEl ? timerTaskSelectEl.value : '', elapsed);
+    }
+  }
+  pomoPhase = 'work';
+  pomoRemaining = (parseInt(pomoWorkMinInput.value,10) || 25) * 60;
+  renderPomo();
+}
+function resetPomo(){
+  pausePomo();
+  pomoPhase = 'work';
+  pomoRemaining = (parseInt(pomoWorkMinInput.value,10) || 25) * 60;
+  renderPomo();
+}
+pomoStartBtn.addEventListener('click', startPomo);
+document.getElementById('pomoPauseBtn').addEventListener('click', pausePomo);
+document.getElementById('pomoStopBtn').addEventListener('click', stopPomo);
+document.getElementById('pomoResetBtn').addEventListener('click', resetPomo);
+[pomoWorkMinInput, pomoBreakMinInput].forEach(inp=> inp.addEventListener('change', ()=>{ if(!pomoInterval) resetPomo(); }));
+renderPomo();
+
+let basicRemaining = 10 * 60;
+let basicInterval = null;
+let basicSessionTotalSeconds = 10 * 60;
+const basicDisplayEl = document.getElementById('basicDisplay');
+const basicMinInput = document.getElementById('basicMinInput');
+const basicStartBtn = document.getElementById('basicStartBtn');
+
+function renderBasic(){ basicDisplayEl.textContent = formatTime(basicRemaining); }
+function startBasic(){
+  if(basicInterval) return;
+  if(basicRemaining <= 0){
+    basicRemaining = (parseInt(basicMinInput.value,10) || 10) * 60;
+    basicSessionTotalSeconds = basicRemaining;
+  }
+  basicStartBtn.disabled = true;
+  basicInterval = setInterval(()=>{
+    basicRemaining--;
+    if(basicRemaining <= 0){
+      basicRemaining = 0; renderBasic();
+      clearInterval(basicInterval); basicInterval = null; basicStartBtn.disabled = false;
+      recordStudyTime(timerTaskSelectEl ? timerTaskSelectEl.value : '', basicSessionTotalSeconds);
+      showTimerDoneCelebration('⏱️ 설정한 시간이 끝났어요! 수고했어요');
+      awardSticker('기본 타이머 완료');
+      return;
+    }
+    renderBasic();
+  }, 1000);
+}
+function pauseBasic(){ clearInterval(basicInterval); basicInterval = null; basicStartBtn.disabled = false; }
+function stopBasic(){
+  clearInterval(basicInterval); basicInterval = null; basicStartBtn.disabled = false;
+  const elapsed = basicSessionTotalSeconds - Math.max(basicRemaining, 0);
+  if(elapsed > 0){
+    recordStudyTime(timerTaskSelectEl ? timerTaskSelectEl.value : '', elapsed);
+  }
+  basicRemaining = (parseInt(basicMinInput.value,10) || 10) * 60;
+  basicSessionTotalSeconds = basicRemaining;
+  renderBasic();
+}
+function resetBasic(){
+  pauseBasic();
+  basicRemaining = (parseInt(basicMinInput.value,10) || 10) * 60;
+  basicSessionTotalSeconds = basicRemaining;
+  renderBasic();
+}
+basicStartBtn.addEventListener('click', startBasic);
+document.getElementById('basicPauseBtn').addEventListener('click', pauseBasic);
+document.getElementById('basicStopBtn').addEventListener('click', stopBasic);
+document.getElementById('basicResetBtn').addEventListener('click', resetBasic);
+basicMinInput.addEventListener('change', ()=>{ if(!basicInterval) resetBasic(); });
+renderBasic();
+
+renderCalendar();
+</script>
+</body>
+</html>
