@@ -185,17 +185,29 @@
   #calGrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;min-width:0;}
   .cal-dow{text-align:center;font-size:11.5px;color:var(--muted);padding-bottom:4px;}
   .cal-day{
-    aspect-ratio:1/1; border-radius:10px; border:1px solid var(--border); background:var(--card);
-    padding:5px; font-size:12.5px; display:flex;flex-direction:column;gap:3px; cursor:pointer; min-width:0;
+    min-height:92px; border-radius:10px; border:1px solid var(--border); background:var(--card);
+    padding:5px; font-size:12.5px; display:flex;flex-direction:column;gap:2px; cursor:pointer; min-width:0;
+    overflow:hidden;
   }
   .cal-day.other-month{opacity:0.3;}
   .cal-day.today{border:2px solid var(--accent);}
   .cal-day.selected{border-color:var(--ink);}
-  .cal-dots{display:flex;gap:3px;flex-wrap:wrap;}
-  .dot{width:6px;height:6px;border-radius:50%;}
-  .dot.high{background:var(--pri-high);}
-  .dot.medium{background:var(--pri-medium);}
-  .dot.low{background:var(--pri-low);}
+  .cal-day-num{font-weight:600;flex-shrink:0;}
+  .cal-day-events{display:flex;flex-direction:column;gap:1px;overflow:hidden;flex:1;min-height:0;}
+  .cal-day-events .ev-line{
+    font-size:9.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    padding:1px 3px;border-radius:4px;
+  }
+  .cal-day-events .ev-line.school{background:var(--accent-soft);color:var(--accent-dark);font-weight:600;}
+  .cal-day-events .ev-line.task{color:var(--ink);}
+  .cal-day-events .ev-line.task.high{color:var(--pri-high);}
+  .cal-day-events .ev-line.task.medium{color:var(--pri-medium);}
+  .cal-day-events .ev-line.task.low{color:var(--pri-low);}
+  .cal-day-events .ev-line.more{color:var(--muted);font-style:italic;}
+  @media (max-width:720px){
+    .cal-day{min-height:66px;}
+    .cal-day-events .ev-line{font-size:8.5px;}
+  }
 
   #goalBox{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:13px 15px; margin-bottom:14px; }
   #goalTextRow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;flex-wrap:wrap;gap:6px;}
@@ -316,6 +328,7 @@
     <button class="tab" data-tab="school">학교 정보</button>
     <button class="tab" data-tab="stickers">스티커 모음</button>
     <button class="tab" data-tab="stats">통계</button>
+    <button class="tab" data-tab="trash">휴지통</button>
   </nav>
 
   <main id="main">
@@ -504,6 +517,17 @@
         </div>
       </div>
     </section>
+
+    <section class="page" id="page-trash">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px;">
+          <h2 class="hand" style="margin:0;">휴지통</h2>
+          <button id="emptyTrashBtn" style="border:1px solid var(--border);background:var(--card);color:var(--danger);padding:7px 14px;border-radius:10px;font-size:12.5px;font-weight:700;">전체 비우기</button>
+        </div>
+        <p style="color:var(--muted);font-size:12.5px;margin:0 0 16px;">삭제한 할 일이 30일간 보관돼요. 다시 필요하면 복구할 수 있어요.</p>
+        <ul id="trashList" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;"></ul>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -677,7 +701,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let tasksCol, stickersCol, notificationsCol, customEventsCol;
+let allTasks = [];
 let tasks = [];
+let trashedTasks = [];
 let stickers = [];
 let notifications = [];
 let customEvents = [];
@@ -693,7 +719,7 @@ function sanitizeStudentId(raw){
 function resetAppState(){
   unsubscribers.forEach(u=>{ try{ u(); }catch(err){} });
   unsubscribers = [];
-  tasks = []; stickers = []; notifications = []; customEvents = [];
+  allTasks = []; tasks = []; trashedTasks = []; stickers = []; notifications = []; customEvents = [];
   dbReady = false;
   addBtn.disabled = true;
   statusEl.textContent = "연결 중...";
@@ -789,7 +815,7 @@ document.getElementById('accountBtn').addEventListener('click', async ()=>{
 
 async function deleteAccountData(){
   const targetId = STUDENT_ID;
-  await Promise.all(tasks.map(t=>deleteDoc(doc(db,"students",targetId,"tasks",t.id)).catch(()=>{})));
+  await Promise.all(allTasks.map(t=>deleteDoc(doc(db,"students",targetId,"tasks",t.id)).catch(()=>{})));
   await Promise.all(stickers.map(s=>deleteDoc(doc(db,"students",targetId,"stickers",s.id)).catch(()=>{})));
   await Promise.all(notifications.map(n=>deleteDoc(doc(db,"students",targetId,"notifications",n.id)).catch(()=>{})));
   await Promise.all(customEvents.map(ev=>deleteDoc(doc(db,"students",targetId,"events",ev.id)).catch(()=>{})));
@@ -823,7 +849,9 @@ async function loadStudentData(studentId){
     customEventsCol = collection(db, "students", studentId, "events");
 
     unsubscribers.push(onSnapshot(query(tasksCol, orderBy('createdAt','asc')), (snap)=>{
-      tasks = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      allTasks = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      tasks = allTasks.filter(t=>!t.deleted);
+      trashedTasks = allTasks.filter(t=>t.deleted);
       renderAll();
     }, (err)=>{ console.error(err); statusEl.textContent = 'Firestore 오류'; }));
 
@@ -888,6 +916,7 @@ document.querySelectorAll('.tab').forEach(btn=>{
     document.getElementById('page-'+btn.dataset.tab).classList.add('active');
     if(btn.dataset.tab === 'calendar') renderCalendar();
     if(btn.dataset.tab === 'school') renderSchoolPage();
+    if(btn.dataset.tab === 'trash') renderTrash();
   });
 });
 
@@ -963,6 +992,7 @@ document.getElementById('taskForm').addEventListener('submit', async (e)=>{
       alertMinutes,
       completed: false,
       notified: false,
+      deleted: false,
       createdAt: serverTimestamp()
     });
   }catch(err){ console.error(err); }
@@ -983,12 +1013,42 @@ async function toggleTask(task){
   else removeStickerForTask(task.id);
 }
 
+/* 할 일 삭제 = 휴지통으로 이동 (소프트 삭제). 완료된 할 일이었다면 스티커도 함께 회수. */
 async function deleteTask(task){
   if(!dbReady) return;
-  const confirmed = await customConfirm(`"${task.title}" 할 일을 삭제할까요?`);
+  const confirmed = await customConfirm(`"${task.title}" 할 일을 휴지통으로 보낼까요?\n스티커를 받았다면 함께 회수돼요.`, { yesLabel: '휴지통으로', yesDanger: false });
   if(!confirmed) return;
-  try{ await deleteDoc(doc(db,"students",STUDENT_ID,"tasks",task.id)); }
-  catch(err){ console.error(err); }
+  try{
+    await updateDoc(doc(db,"students",STUDENT_ID,"tasks",task.id), { deleted: true, deletedAt: serverTimestamp() });
+  }catch(err){ console.error(err); return; }
+  await removeStickerForTask(task.id);
+}
+
+/* 휴지통에서 복구: 원래 목록으로 되돌림 (완료 여부/스티커는 복구되지 않음) */
+async function restoreTask(task){
+  if(!dbReady) return;
+  try{
+    await updateDoc(doc(db,"students",STUDENT_ID,"tasks",task.id), { deleted: false, deletedAt: null });
+  }catch(err){ console.error(err); }
+}
+
+/* 휴지통에서 영구 삭제: 문서 자체를 제거, 되돌릴 수 없음 */
+async function permanentlyDeleteTask(task){
+  if(!dbReady) return;
+  const confirmed = await customConfirm(`"${task.title}" 할 일을 영구 삭제할까요?\n이 작업은 되돌릴 수 없어요.`);
+  if(!confirmed) return;
+  try{
+    await deleteDoc(doc(db,"students",STUDENT_ID,"tasks",task.id));
+  }catch(err){ console.error(err); }
+}
+
+async function emptyTrash(){
+  if(!dbReady || trashedTasks.length === 0) return;
+  const confirmed = await customConfirm(`휴지통을 비울까요?\n${trashedTasks.length}개 항목이 영구 삭제돼요. 되돌릴 수 없어요.`);
+  if(!confirmed) return;
+  try{
+    await Promise.all(trashedTasks.map(t=>deleteDoc(doc(db,"students",STUDENT_ID,"tasks",t.id)).catch(()=>{})));
+  }catch(err){ console.error(err); }
 }
 
 function customConfirm(message, options={}){
@@ -1144,7 +1204,7 @@ function renderTasks(){
           ${task.studiedSeconds ? `<span style="color:var(--muted);">🕒 ${formatDuration(task.studiedSeconds)}</span>` : ''}
         </div>
       </div>
-      <button class="delBtn" title="삭제">✕</button>
+      <button class="delBtn" title="휴지통으로">✕</button>
     `;
     li.querySelector('.check').addEventListener('click', ()=>toggleTask(task));
     li.querySelector('.delBtn').addEventListener('click', ()=> deleteTask(task));
@@ -1154,6 +1214,56 @@ function renderTasks(){
   renderStats();
   renderTimerTaskSelect();
 }
+
+/* ============ 휴지통 ============ */
+function renderTrash(){
+  const listEl = document.getElementById('trashList');
+  if(!listEl) return;
+  const list = [...trashedTasks].sort((a,b)=>{
+    const at = a.deletedAt?.toMillis?.() ?? (a.deletedAt ? new Date(a.deletedAt).getTime() : 0);
+    const bt = b.deletedAt?.toMillis?.() ?? (b.deletedAt ? new Date(b.deletedAt).getTime() : 0);
+    return bt - at;
+  });
+
+  if(list.length === 0){
+    listEl.innerHTML = '<p class="empty">휴지통이 비어있어요.</p>';
+    return;
+  }
+
+  listEl.innerHTML = list.map(task=>{
+    const d = new Date(task.deadline);
+    const pad2 = n => String(n).padStart(2,'0');
+    const dateStr = `${d.getMonth()+1}/${d.getDate()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    return `
+      <li class="task pri-${task.priority}" style="opacity:0.75;" data-trashid="${task.id}">
+        <div class="task-body">
+          <div class="task-title">${escapeHtml(task.title)}</div>
+          <div class="task-meta">
+            ${task.subject ? `<span>${escapeHtml(task.subject)}</span>` : ''}
+            <span>📅 ${dateStr}</span>
+            <span class="badge ${task.priority}">${task.priority==='high'?'상':task.priority==='medium'?'중':'하'}</span>
+          </div>
+        </div>
+        <button class="delBtn" data-restore="${task.id}" title="복구" style="color:var(--accent-dark);font-size:13px;">↩️ 복구</button>
+        <button class="delBtn" data-forgetit="${task.id}" title="영구 삭제" style="font-size:13px;">🗑️</button>
+      </li>
+    `;
+  }).join('');
+
+  listEl.querySelectorAll('[data-restore]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const task = trashedTasks.find(t=>t.id === btn.dataset.restore);
+      if(task) restoreTask(task);
+    });
+  });
+  listEl.querySelectorAll('[data-forgetit]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const task = trashedTasks.find(t=>t.id === btn.dataset.forgetit);
+      if(task) permanentlyDeleteTask(task);
+    });
+  });
+}
+document.getElementById('emptyTrashBtn').addEventListener('click', emptyTrash);
 
 /* ============ 알림 발생 체크 (인앱 알람 + 알림함 기록) ============ */
 function checkDeadlineAlerts(){
@@ -1414,13 +1524,26 @@ function renderCalendar(){
     if(selectedDay && cell.dateObj.toDateString() === selectedDay.toDateString()){
       el.classList.add('selected');
     }
-    const dayTasks = tasks.filter(t=> new Date(t.deadline).toDateString() === cell.dateObj.toDateString());
+    const dayTasks = sortedTasks(tasks.filter(t=> new Date(t.deadline).toDateString() === cell.dateObj.toDateString()));
     const ymd = toYmd(cell.dateObj);
     const neisEvents = schoolEventsByDate[ymd] || [];
     const customDayEvents = getCustomEventsForYmd(ymd).map(ev=>ev.title);
     const allEvents = [...neisEvents, ...customDayEvents];
+
+    const lines = [];
+    neisEvents.forEach(e => lines.push({ text: '🏫 ' + e, cls: 'school' }));
+    customDayEvents.forEach(e => lines.push({ text: '📌 ' + e, cls: 'school' }));
+    dayTasks.forEach(t => lines.push({ text: t.title, cls: 'task ' + t.priority }));
+
+    const maxLines = 3;
+    const visibleLines = lines.slice(0, maxLines);
+    const moreCount = lines.length - visibleLines.length;
+    const linesHtml = visibleLines.map(l =>
+      `<div class="ev-line ${l.cls}" title="${escapeHtml(l.text)}">${escapeHtml(l.text)}</div>`
+    ).join('') + (moreCount > 0 ? `<div class="ev-line more">+${moreCount}개 더보기</div>` : '');
+
     const eventTitle = allEvents.length ? ` title="${escapeHtml(allEvents.join(', '))}"` : '';
-    el.innerHTML = `<span${eventTitle}>${cell.day}${allEvents.length ? ' 🏫' : ''}</span><div class="cal-dots">${dayTasks.slice(0,6).map(t=>`<span class="dot ${t.priority}"></span>`).join('')}</div>`;
+    el.innerHTML = `<span class="cal-day-num"${eventTitle}>${cell.day}</span><div class="cal-day-events">${linesHtml}</div>`;
     el.addEventListener('click', ()=>{
       selectedDay = cell.dateObj;
       renderCalendar();
@@ -1594,6 +1717,7 @@ function renderAll(){
   renderStickers();
   renderStats();
   renderDM();
+  renderTrash();
   checkDeadlineAlerts();
 }
 
