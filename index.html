@@ -312,7 +312,7 @@
       <div style="display:flex;align-items:center;gap:8px;">
         <span id="statusText">연결 중...</span>
         <button id="themeToggleBtn" class="icon-btn" aria-label="다크모드 전환">🌙</button>
-        <button id="accountBtn" class="icon-btn" aria-label="아이디 전환">🙍</button>
+        <button id="accountBtn" class="icon-btn" aria-label="로그아웃" title="로그아웃">🚪</button>
         <button id="deleteAccountBtn" class="icon-btn" aria-label="회원 탈퇴" title="회원 탈퇴">🗑️</button>
         <button id="dmBtn" class="icon-btn" aria-label="알림함 열기">
           🚨
@@ -344,8 +344,25 @@
             <label for="inDeadline" style="font-size:10.5px;color:var(--muted);">마감 시간</label>
             <input type="datetime-local" id="inDeadline" required />
           </div>
+          <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:130px;">
+            <label for="inAlert" style="font-size:10.5px;color:var(--muted);">알림</label>
+            <select id="inAlert">
+              <option value="none" selected>없음</option>
+              <option value="0">마감 시간</option>
+              <option value="5">5분 전</option>
+              <option value="10">10분 전</option>
+              <option value="15">15분 전</option>
+              <option value="30">30분 전</option>
+              <option value="60">1시간 전</option>
+              <option value="120">2시간 전</option>
+              <option value="1440">1일 전</option>
+              <option value="2880">2일 전</option>
+              <option value="10080">1주 전</option>
+            </select>
+          </div>
           <button type="submit" id="addBtn" aria-label="할 일 추가" title="추가">+</button>
         </form>
+        <p id="taskFormError" style="display:none;color:var(--danger);font-size:12.5px;margin:10px 0 0;"></p>
       </div>
 
       <div class="card" id="taskListSection">
@@ -622,8 +639,7 @@ async function handleLogin(){
     const ref = doc(db,"students",form.id);
     const snap = await getDoc(ref);
     if(!snap.exists()){
-      // 계정이 없으면 그 자리에서 바로 회원가입으로 이어줌
-      await handleSignup();
+      showAuthError('가입되지 않은 이름/학번이에요. [회원가입]을 먼저 눌러주세요.');
       return;
     }
     if(snap.data().passwordHash !== hashPassword(form.pw)){
@@ -645,7 +661,7 @@ document.getElementById('studentLoginBtn').addEventListener('click', handleLogin
 document.getElementById('studentPwInput').addEventListener('keydown', (e)=>{ if(e.key === 'Enter') handleLogin(); });
 
 document.getElementById('accountBtn').addEventListener('click', async ()=>{
-  const confirmed = await customConfirm(`현재 아이디: "${STUDENT_ID}"\n다른 이름/학번으로 전환할까요? (지금 데이터는 그대로 안전하게 남아있어요)`);
+  const confirmed = await customConfirm(`"${STUDENT_ID}" 계정에서 로그아웃 하시겠습니까?\n(지금 데이터는 그대로 안전하게 남아있어요)`, { yesLabel: '로그아웃', yesDanger: false });
   if(!confirmed) return;
   localStorage.removeItem(DISPLAY_NAME_KEY);
   resetAppState();
@@ -789,18 +805,30 @@ document.querySelectorAll('.chip[data-todoview]').forEach(chip=>{
 document.getElementById('taskForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   if(!dbReady) return;
+  const errorEl = document.getElementById('taskFormError');
+  errorEl.style.display = 'none';
+
   const title = document.getElementById('inTitle').value.trim();
   const subject = document.getElementById('inSubject').value.trim();
   const priority = document.getElementById('inPriority').value;
   const startTime = document.getElementById('inStartTime').value;
   const deadline = document.getElementById('inDeadline').value;
+  const alertRaw = document.getElementById('inAlert').value;
+  const alertMinutes = alertRaw === 'none' ? null : parseInt(alertRaw, 10);
   if(!title || !deadline) return;
+
+  if(startTime && new Date(startTime) >= new Date(deadline)){
+    errorEl.textContent = '시작 시간은 마감 시간보다 빨라야 해요.';
+    errorEl.style.display = 'block';
+    return;
+  }
 
   try{
     await addDoc(tasksCol, {
       title, subject, priority,
       startTime: startTime ? new Date(startTime).toISOString() : null,
       deadline: new Date(deadline).toISOString(),
+      alertMinutes,
       completed: false,
       notified: false,
       createdAt: serverTimestamp()
@@ -809,6 +837,7 @@ document.getElementById('taskForm').addEventListener('submit', async (e)=>{
 
   e.target.reset();
   document.getElementById('inPriority').value = 'medium';
+  document.getElementById('inAlert').value = 'none';
 });
 
 /* ============ TASK ACTIONS ============ */
@@ -830,13 +859,16 @@ async function deleteTask(task){
   catch(err){ console.error(err); }
 }
 
-function customConfirm(message){
+function customConfirm(message, options={}){
+  const { yesLabel = '삭제', yesDanger = true } = options;
   return new Promise(resolve=>{
     const overlay = document.getElementById('confirmOverlay');
     document.getElementById('confirmMessage').textContent = message;
     overlay.classList.add('show');
     const yesBtn = document.getElementById('confirmYesBtn');
     const noBtn = document.getElementById('confirmNoBtn');
+    yesBtn.textContent = yesLabel;
+    yesBtn.style.background = yesDanger ? 'var(--danger)' : 'var(--accent)';
     function cleanup(result){
       overlay.classList.remove('show');
       yesBtn.removeEventListener('click', onYes);
@@ -886,13 +918,33 @@ function sortedTasks(list){
 }
 function isUrgent(task){
   if(task.completed) return false;
+  if(task.alertMinutes === null || task.alertMinutes === undefined) return false;
   const diffH = (new Date(task.deadline) - new Date()) / 3600000;
-  return diffH <= 24 && diffH >= -1;
+  const thresholdH = task.alertMinutes / 60;
+  return diffH <= thresholdH && diffH >= -1;
 }
 function escapeHtml(str){
   const d = document.createElement('div');
   d.textContent = str;
   return d.innerHTML;
+}
+function formatDuration(totalSeconds){
+  totalSeconds = Math.floor(totalSeconds || 0);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const parts = [];
+  if(h > 0) parts.push(`${h}시간`);
+  if(h > 0 || m > 0) parts.push(`${m}분`);
+  parts.push(`${s}초`);
+  return parts.join(' ');
+}
+function alertLabel(minutes){
+  if(minutes === 0) return '마감 시간';
+  if(minutes < 60) return `${minutes}분 전`;
+  if(minutes < 1440) return `${Math.round(minutes/60)}시간 전`;
+  if(minutes < 10080) return `${Math.round(minutes/1440)}일 전`;
+  return `${Math.round(minutes/10080)}주 전`;
 }
 
 function renderTasks(){
@@ -930,7 +982,8 @@ function renderTasks(){
           <span>📅 ${dateStr}</span>
           <span class="badge ${task.priority}">${task.priority==='high'?'상':task.priority==='medium'?'중':'하'}</span>
           ${isUrgent(task) ? '<span class="badge urgent">마감임박</span>' : ''}
-          ${task.studiedSeconds ? `<span style="color:var(--muted);">🕒 ${Math.round(task.studiedSeconds/60)}분</span>` : ''}
+          ${(task.alertMinutes !== null && task.alertMinutes !== undefined) ? `<span style="color:var(--muted);">🔔 ${alertLabel(task.alertMinutes)}</span>` : ''}
+          ${task.studiedSeconds ? `<span style="color:var(--muted);">🕒 ${formatDuration(task.studiedSeconds)}</span>` : ''}
         </div>
       </div>
       <button class="delBtn" title="삭제">✕</button>
@@ -952,7 +1005,7 @@ function checkDeadlineAlerts(){
     if(("Notification" in window)){
       if(Notification.permission === "default") Notification.requestPermission();
       if(Notification.permission === "granted"){
-        new Notification("⏰ 마감 임박!", { body: `${t.title} - 24시간 이내 마감입니다.` });
+        new Notification("⏰ 마감 임박!", { body: `${t.title} - ${alertLabel(t.alertMinutes)} 마감입니다.` });
       }
     }
     try{
@@ -1252,6 +1305,11 @@ setInterval(()=>{ renderTasks(); renderDM(); }, 60000);
   document.getElementById('inDeadline').value = val;
 })();
 
+document.getElementById('inStartTime').addEventListener('change', (e)=>{
+  const deadlineInput = document.getElementById('inDeadline');
+  deadlineInput.min = e.target.value || '';
+});
+
 /* ============ TIMER (뽀모도로 / 기본 타이머) ============ */
 document.querySelectorAll('.chip[data-timermode]').forEach(chip=>{
   chip.addEventListener('click', ()=>{
@@ -1294,7 +1352,7 @@ function renderTimerStudiedLabel(){
   if(!taskId){ timerStudiedLabelEl.textContent = ''; return; }
   const task = tasks.find(t=>t.id === taskId);
   const seconds = (task && task.studiedSeconds) || 0;
-  timerStudiedLabelEl.textContent = seconds > 0 ? `지금까지 이 할 일에 ${Math.round(seconds/60)}분 공부했어요` : '';
+  timerStudiedLabelEl.textContent = seconds > 0 ? `지금까지 이 할 일에 ${formatDuration(seconds)} 공부했어요` : '';
 }
 
 async function recordStudyTime(taskId, seconds){
@@ -1313,12 +1371,21 @@ let pomoRemaining = 25 * 60;
 let pomoInterval = null;
 let pomoCycles = 0;
 let pomoWorkSessionMinutes = 25;
+let pomoPendingSeconds = 0; // 아직 서버에 반영 안 한 초 (몇 초라도 실시간 반영하기 위한 버퍼)
+const POMO_FLUSH_EVERY = 5; // 5초마다 서버에 반영 (몇 초만 켰다 꺼도 pause/stop 시 즉시 flush됨)
 const pomoDisplayEl = document.getElementById('pomoDisplay');
 const pomoPhaseLabelEl = document.getElementById('timerPhaseLabel');
 const pomoCycleLabelEl = document.getElementById('pomoCycleLabel');
 const pomoWorkMinInput = document.getElementById('pomoWorkMin');
 const pomoBreakMinInput = document.getElementById('pomoBreakMin');
 const pomoStartBtn = document.getElementById('pomoStartBtn');
+
+function flushPomoPending(){
+  if(pomoPendingSeconds <= 0) return;
+  const seconds = pomoPendingSeconds;
+  pomoPendingSeconds = 0;
+  recordStudyTime(timerTaskSelectEl ? timerTaskSelectEl.value : '', seconds);
+}
 
 function renderPomo(){
   pomoDisplayEl.textContent = formatTime(pomoRemaining);
@@ -1331,10 +1398,14 @@ function startPomo(){
   pomoStartBtn.disabled = true;
   pomoInterval = setInterval(()=>{
     pomoRemaining--;
+    if(pomoPhase === 'work'){
+      pomoPendingSeconds++;
+      if(pomoPendingSeconds >= POMO_FLUSH_EVERY) flushPomoPending();
+    }
     if(pomoRemaining < 0){
       if(pomoPhase === 'work'){
+        flushPomoPending();
         pomoCycles++;
-        recordStudyTime(timerTaskSelectEl ? timerTaskSelectEl.value : '', pomoWorkSessionMinutes*60);
         pomoPhase = 'break';
         pomoRemaining = (parseInt(pomoBreakMinInput.value,10) || 5) * 60;
         showTimerDoneCelebration('🍅 한 뽀모도로 완료! 잠깐 쉬어가요 ☕');
@@ -1349,16 +1420,13 @@ function startPomo(){
     renderPomo();
   }, 1000);
 }
-function pausePomo(){ clearInterval(pomoInterval); pomoInterval = null; pomoStartBtn.disabled = false; }
+function pausePomo(){
+  clearInterval(pomoInterval); pomoInterval = null; pomoStartBtn.disabled = false;
+  flushPomoPending();
+}
 function stopPomo(){
   clearInterval(pomoInterval); pomoInterval = null; pomoStartBtn.disabled = false;
-  if(pomoPhase === 'work'){
-    const totalSec = pomoWorkSessionMinutes * 60;
-    const elapsed = totalSec - Math.max(pomoRemaining, 0);
-    if(elapsed > 0){
-      recordStudyTime(timerTaskSelectEl ? timerTaskSelectEl.value : '', elapsed);
-    }
-  }
+  flushPomoPending();
   pomoPhase = 'work';
   pomoRemaining = (parseInt(pomoWorkMinInput.value,10) || 25) * 60;
   renderPomo();
@@ -1379,9 +1447,18 @@ renderPomo();
 let basicRemaining = 10 * 60;
 let basicInterval = null;
 let basicSessionTotalSeconds = 10 * 60;
+let basicPendingSeconds = 0; // 아직 서버에 반영 안 한 초
+const BASIC_FLUSH_EVERY = 5;
 const basicDisplayEl = document.getElementById('basicDisplay');
 const basicMinInput = document.getElementById('basicMinInput');
 const basicStartBtn = document.getElementById('basicStartBtn');
+
+function flushBasicPending(){
+  if(basicPendingSeconds <= 0) return;
+  const seconds = basicPendingSeconds;
+  basicPendingSeconds = 0;
+  recordStudyTime(timerTaskSelectEl ? timerTaskSelectEl.value : '', seconds);
+}
 
 function renderBasic(){ basicDisplayEl.textContent = formatTime(basicRemaining); }
 function startBasic(){
@@ -1393,10 +1470,12 @@ function startBasic(){
   basicStartBtn.disabled = true;
   basicInterval = setInterval(()=>{
     basicRemaining--;
+    basicPendingSeconds++;
+    if(basicPendingSeconds >= BASIC_FLUSH_EVERY) flushBasicPending();
     if(basicRemaining <= 0){
       basicRemaining = 0; renderBasic();
       clearInterval(basicInterval); basicInterval = null; basicStartBtn.disabled = false;
-      recordStudyTime(timerTaskSelectEl ? timerTaskSelectEl.value : '', basicSessionTotalSeconds);
+      flushBasicPending();
       showTimerDoneCelebration('⏱️ 설정한 시간이 끝났어요! 수고했어요');
       awardSticker('기본 타이머 완료');
       return;
@@ -1404,13 +1483,13 @@ function startBasic(){
     renderBasic();
   }, 1000);
 }
-function pauseBasic(){ clearInterval(basicInterval); basicInterval = null; basicStartBtn.disabled = false; }
+function pauseBasic(){
+  clearInterval(basicInterval); basicInterval = null; basicStartBtn.disabled = false;
+  flushBasicPending();
+}
 function stopBasic(){
   clearInterval(basicInterval); basicInterval = null; basicStartBtn.disabled = false;
-  const elapsed = basicSessionTotalSeconds - Math.max(basicRemaining, 0);
-  if(elapsed > 0){
-    recordStudyTime(timerTaskSelectEl ? timerTaskSelectEl.value : '', elapsed);
-  }
+  flushBasicPending();
   basicRemaining = (parseInt(basicMinInput.value,10) || 10) * 60;
   basicSessionTotalSeconds = basicRemaining;
   renderBasic();
@@ -1427,6 +1506,12 @@ document.getElementById('basicStopBtn').addEventListener('click', stopBasic);
 document.getElementById('basicResetBtn').addEventListener('click', resetBasic);
 basicMinInput.addEventListener('change', ()=>{ if(!basicInterval) resetBasic(); });
 renderBasic();
+
+// 탭을 닫거나 새로고침할 때도 아직 반영 안 된 초를 최대한 반영
+window.addEventListener('beforeunload', ()=>{
+  flushPomoPending();
+  flushBasicPending();
+});
 
 renderCalendar();
 </script>
