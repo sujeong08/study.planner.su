@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
 <title>스터디 플래너</title>
+<link id="faviconLink" rel="icon" href="" />
 <link rel="stylesheet" as="style" crossorigin
   href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
 <style>
@@ -288,8 +289,8 @@
   }
 
   #schoolBox{ white-space:pre-line; font-size:13.5px; line-height:1.6; }
-  #schoolTimetableBox ul, #schoolScheduleBox ul{ list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px; }
-  #schoolTimetableBox li, #schoolScheduleBox li{
+  #schoolTimetableBox ul{ list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px; }
+  #schoolTimetableBox li{
     background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:8px 12px; font-size:13.5px;
   }
   #schoolMetaRow{font-size:11.5px;color:var(--muted);margin-bottom:10px;}
@@ -460,10 +461,6 @@
         <div id="schoolMealBox" class="empty">불러오는 중...</div>
       </div>
       <div class="card">
-        <h2 class="hand">🗓️ 오늘 학사일정</h2>
-        <div id="schoolScheduleBox" class="empty">불러오는 중...</div>
-      </div>
-      <div class="card">
         <h2 class="hand">📚 오늘 시간표</h2>
         <div id="schoolTimetableBox" class="empty">불러오는 중...</div>
       </div>
@@ -626,15 +623,6 @@ async function fetchMeal(dateStr){
   }catch(err){ console.error('급식 조회 실패', err); return null; }
 }
 
-async function fetchSchoolSchedule(dateStr){
-  try{
-    const url = `https://open.neis.go.kr/hub/SchoolSchedule?KEY=${NEIS_KEY}&Type=json&ATPT_OFCDC_SC_CODE=${NEIS_OFCDC}&SD_SCHUL_CODE=${NEIS_SCHUL}&AA_YMD=${dateStr}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    return data.SchoolSchedule?.[1]?.row?.map(r => r.EVENT_NM) || [];
-  }catch(err){ console.error('학사일정 조회 실패', err); return []; }
-}
-
 async function fetchTimetable(dateStr, grade, classNm){
   try{
     const url = `https://open.neis.go.kr/hub/hisTimetable?KEY=${NEIS_KEY}&Type=json&ATPT_OFCDC_SC_CODE=${NEIS_OFCDC}&SD_SCHUL_CODE=${NEIS_SCHUL}&ALL_TI_YMD=${dateStr}&GRADE=${grade}&CLASS_NM=${classNm}&pIndex=1&pSize=100`;
@@ -662,15 +650,6 @@ async function renderSchoolPage(){
   } else {
     mealBox.className = 'empty';
     mealBox.textContent = '오늘은 급식 정보가 없어요 (주말/방학일 수 있어요).';
-  }
-
-  const schedBox = document.getElementById('schoolScheduleBox');
-  const events = await fetchSchoolSchedule(dateStr);
-  if(events.length){
-    schedBox.innerHTML = `<ul>${events.map(e => `<li>${escapeHtml(e)}</li>`).join('')}</ul>`;
-  } else {
-    schedBox.className = 'empty';
-    schedBox.textContent = '오늘 등록된 학사일정이 없어요.';
   }
 
   const ttBox = document.getElementById('schoolTimetableBox');
@@ -718,6 +697,7 @@ function resetAppState(){
   dbReady = false;
   addBtn.disabled = true;
   statusEl.textContent = "연결 중...";
+  updateAppBadge(0);
 }
 
 function showStudentIdOverlay(){
@@ -1203,6 +1183,66 @@ function timeAgo(ts){
   return Math.floor(diffSec/86400) + '일 전';
 }
 
+/* ============ 탭 뱃지 (파비콘 + 제목) ============
+   웹사이트 탭이 열려있는 동안(다른 탭을 보고 있어도) 읽지 않은 알림 개수를
+   폰 앱 아이콘 뱃지처럼 파비콘 위 빨간 동그라미 + 탭 제목에 표시해줌.
+   탭 자체가 닫히면 당연히 사라짐 (OS 알림함까지 가는 건 아님). */
+const BASE_TITLE = '스터디 플래너 ✏️';
+let faviconBadgeCanvas = null;
+
+function drawFaviconBadge(count){
+  if(!faviconBadgeCanvas){
+    faviconBadgeCanvas = document.createElement('canvas');
+    faviconBadgeCanvas.width = 64;
+    faviconBadgeCanvas.height = 64;
+  }
+  const ctx = faviconBadgeCanvas.getContext('2d');
+  ctx.clearRect(0, 0, 64, 64);
+
+  // 기본 아이콘: 민트색 원 + 연필 이모지
+  ctx.beginPath();
+  ctx.arc(32, 32, 30, 0, Math.PI * 2);
+  ctx.fillStyle = '#0F9C8E';
+  ctx.fill();
+  ctx.font = '32px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('✏️', 32, 34);
+
+  if(count > 0){
+    const label = count > 9 ? '9+' : String(count);
+    ctx.beginPath();
+    ctx.arc(47, 17, 16, 0, Math.PI * 2);
+    ctx.fillStyle = '#E5484D';
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#fff';
+    ctx.stroke();
+    ctx.font = 'bold 17px sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(label, 47, 18);
+  }
+
+  const link = document.getElementById('faviconLink');
+  if(link) link.href = faviconBadgeCanvas.toDataURL('image/png');
+}
+
+function updateAppBadge(count){
+  // 1) 탭 제목에 개수 표시 (다른 탭을 보고 있어도 탭 목록에서 바로 보임)
+  document.title = count > 0 ? `(${count > 9 ? '9+' : count}) ${BASE_TITLE}` : BASE_TITLE;
+
+  // 2) 파비콘에 빨간 뱃지 그려넣기
+  drawFaviconBadge(count);
+
+  // 3) 지원되는 브라우저(주로 홈 화면에 설치한 PWA)라면 앱 아이콘 뱃지도 함께 표시
+  if('setAppBadge' in navigator){
+    try{
+      if(count > 0) navigator.setAppBadge(count);
+      else navigator.clearAppBadge();
+    }catch(err){ /* 미지원 환경은 조용히 무시 */ }
+  }
+}
+
 function renderDM(){
   renderDMUrgent();
   const listEl = document.getElementById('dmList');
@@ -1212,6 +1252,7 @@ function renderDM(){
 
   badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
   badge.classList.toggle('hidden', unreadCount === 0);
+  updateAppBadge(unreadCount); // 탭 파비콘 + 제목에도 뱃지 표시
 
   if(sorted.length === 0){
     listEl.innerHTML = '<div id="dmEmpty">알림 기록이 없어요.</div>';
@@ -1786,6 +1827,7 @@ window.addEventListener('beforeunload', ()=>{
 });
 
 renderCalendar();
+updateAppBadge(0);
 </script>
 </body>
 </html>
