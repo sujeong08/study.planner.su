@@ -47,25 +47,27 @@
     color:var(--ink);
     background:var(--bg);
     min-height:100vh;
+    line-height:1.55;
+    font-size:15px;
     transition:background .2s ease, color .2s ease;
   }
   h1,h2,h3,.hand{font-family:'Pretendard','Malgun Gothic',sans-serif;font-weight:700;letter-spacing:-.01em;}
   button{font-family:inherit;cursor:pointer;}
   input,select,textarea{font-family:'Pretendard','Malgun Gothic',sans-serif;}
 
-  #shell{ display:flex; min-height:100vh; max-width:1100px; margin:0 auto; }
+  #shell{ display:flex; min-height:100vh; max-width:1280px; margin:0 auto; }
 
-  #tabrail{ display:flex; flex-direction:column; gap:2px; padding:24px 12px; width:136px; flex-shrink:0; }
+  #tabrail{ display:flex; flex-direction:column; gap:4px; padding:28px 14px; width:160px; flex-shrink:0; }
   .tab{
     position:relative; border:none; background:transparent; color:var(--muted);
-    padding:10px 14px; font-family:'Pretendard',sans-serif; font-size:14px; font-weight:600;
+    padding:12px 16px; font-family:'Pretendard',sans-serif; font-size:14.5px; font-weight:600;
     border-radius:10px; text-align:left; letter-spacing:-.01em;
     height:auto; transition:all .15s ease;
   }
   .tab:hover{ background:var(--border); }
   .tab.active{ color:var(--accent-dark); background:var(--accent-soft); }
 
-  #main{ flex:1; padding:30px 30px 60px 22px; min-width:0; }
+  #main{ flex:1; padding:34px 40px 70px 28px; min-width:0; max-width:900px; }
   header.topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; flex-wrap:wrap; gap:10px; }
   header.topbar h1{
     font-size:22px; margin:0; color:var(--ink); font-weight:800;
@@ -89,9 +91,9 @@
 
   .card{
     background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
-    box-shadow:var(--shadow); padding:18px; margin-bottom:18px;
+    box-shadow:var(--shadow); padding:22px 24px; margin-bottom:20px;
   }
-  .card h2{margin:0 0 14px 0;font-size:17px;}
+  .card h2{margin:0 0 16px 0;font-size:18px;}
 
   #taskForm{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
   #taskForm input, #taskForm select{
@@ -140,9 +142,10 @@
   }
   .check.checked{background:var(--accent);border-color:transparent;}
   .check.checked::after{ content:"✓"; color:#fff; font-size:12px; font-weight:bold; position:absolute;inset:0;display:flex;align-items:center;justify-content:center; }
+  .task{padding:13px 14px;}
   .task-body{flex:1;min-width:0;}
-  .task-title{font-size:14.5px;font-weight:600;}
-  .task-meta{font-size:11.5px;color:var(--muted);display:flex;gap:7px;flex-wrap:wrap;margin-top:2px;}
+  .task-title{font-size:15.5px;font-weight:600;line-height:1.4;}
+  .task-meta{font-size:12.5px;color:var(--muted);display:flex;gap:9px;flex-wrap:wrap;margin-top:4px;line-height:1.5;}
   .badge{ font-size:10.5px;padding:2px 7px;border-radius:999px;font-family:'Pretendard',sans-serif;font-weight:700; }
   .badge.high{background:#FCE8E8;color:#C22A2F;}
   .badge.medium{background:#FDF1DC;color:#A15E0C;}
@@ -259,7 +262,7 @@
   #confirmYesBtn{background:var(--danger);color:#fff;}
   #rewardEmoji{font-size:56px;}
   #rewardCard h3{margin:8px 0 4px;font-size:19px;color:var(--accent-dark);}
-  #rewardCard p{margin:0;color:var(--muted);font-size:13.5px;}
+  #rewardCard p{margin:0;color:var(--muted);font-size:13.5px;white-space:pre-line;}
   #rewardCard button{
     margin-top:14px;border:none;color:#fff;padding:8px 18px;border-radius:10px;
     background:var(--accent);font-family:'Pretendard';font-weight:700;font-size:14px;
@@ -284,6 +287,13 @@
     font-weight:700;font-size:14px;background:var(--accent);
   }
 
+  #schoolBox{ white-space:pre-line; font-size:13.5px; line-height:1.6; }
+  #schoolTimetableBox ul, #schoolScheduleBox ul{ list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px; }
+  #schoolTimetableBox li, #schoolScheduleBox li{
+    background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:8px 12px; font-size:13.5px;
+  }
+  #schoolMetaRow{font-size:11.5px;color:var(--muted);margin-bottom:10px;}
+
   @media (max-width:720px){
     #shell{flex-direction:column;}
     #tabrail{ flex-direction:row; width:100%; padding:10px; overflow-x:auto; gap:6px; }
@@ -302,6 +312,7 @@
     <button class="tab active" data-tab="today">오늘 할 일</button>
     <button class="tab" data-tab="timer">타이머</button>
     <button class="tab" data-tab="calendar">캘린더</button>
+    <button class="tab" data-tab="school">학교 정보</button>
     <button class="tab" data-tab="stickers">스티커 모음</button>
     <button class="tab" data-tab="stats">통계</button>
   </nav>
@@ -434,13 +445,39 @@
       </div>
       <div class="card">
         <h2 class="hand" id="selectedDayTitle">날짜를 선택하세요</h2>
+        <div id="customEventFormRow" style="display:flex; gap:8px; margin: 4px 0 14px;">
+          <input type="text" id="customEventInput" placeholder="학사일정 추가 (예: 체육대회)" style="flex:1;padding:9px 11px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:var(--bg);color:var(--ink);" />
+          <button id="customEventAddBtn" style="border:none;color:#fff;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:700;background:var(--accent);white-space:nowrap;">추가</button>
+        </div>
         <ul id="selectedDayList"></ul>
+      </div>
+    </section>
+
+    <section class="page" id="page-school">
+      <div class="card">
+        <div id="schoolMetaRow">가림고등학교 · 인천광역시교육청</div>
+        <h2 class="hand">🍽️ 오늘 급식</h2>
+        <div id="schoolMealBox" class="empty">불러오는 중...</div>
+      </div>
+      <div class="card">
+        <h2 class="hand">🗓️ 오늘 학사일정</h2>
+        <div id="schoolScheduleBox" class="empty">불러오는 중...</div>
+      </div>
+      <div class="card">
+        <h2 class="hand">📚 오늘 시간표</h2>
+        <div id="schoolTimetableBox" class="empty">불러오는 중...</div>
       </div>
     </section>
 
     <section class="page" id="page-stickers">
       <div class="card">
         <h2 class="hand">🎀 스티커 모음판</h2>
+        <div class="toolbar" id="stickerCategoryRow" style="margin-top:0;">
+          <span class="chip" data-stickercat="flower">🌸 꽃</span>
+          <span class="chip" data-stickercat="dessert">🍰 디저트</span>
+          <span class="chip" data-stickercat="stationery">✏️ 필기구</span>
+          <span class="chip" data-stickercat="dog">🐶 강아지</span>
+        </div>
         <div id="goalBox">
           <div id="goalTextRow">
             <span class="hand" id="goalText">목표를 설정해보세요</span>
@@ -512,8 +549,9 @@
 <div id="studentIdOverlay">
   <div id="studentIdCard">
     <h3 class="hand" style="margin:0 0 6px;">👋 반가워요!</h3>
-    <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">아이디와 비밀번호를 입력하면<br>나만의 할 일이 안전하게 저장돼요.</p>
-    <input id="studentIdInput" type="text" placeholder="아이디" autocomplete="username" />
+    <p style="color:var(--muted);font-size:12.5px;margin:0 0 4px;font-weight:700;">가림고등학교 학생 전용 스터디 플래너</p>
+    <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">학번과 비밀번호를 입력하면<br>나만의 할 일이 안전하게 저장돼요.</p>
+    <input id="studentIdInput" type="text" inputmode="numeric" placeholder="학번 (예: 40101)" autocomplete="username" />
     <input id="studentPwInput" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;background:var(--bg);color:var(--ink);margin-bottom:10px;" />
     <p id="authErrorText" style="display:none;color:var(--danger);font-size:12.5px;margin:0 0 10px;text-align:left;"></p>
     <div style="display:flex;gap:8px;">
@@ -528,7 +566,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
-  onSnapshot, query, orderBy, serverTimestamp, increment
+  onSnapshot, query, orderBy, serverTimestamp, increment, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -552,7 +590,106 @@ function hashPassword(str){
   return 'h' + h.toString(36);
 }
 
-const DISPLAY_NAME_KEY = "planner_display_name"; // 로그인 폼에 아이디를 미리 채워주기 위한 용도
+/* ============ NEIS Open API (학교 정보: 급식/학사일정/시간표) ============ */
+// 가림고등학교 고정값. 다른 학교로 바꾸려면 이 세 값만 교체하면 됨.
+const NEIS_KEY = "dbf08520db2149d7bf5d0f52b8266d5a";
+const NEIS_OFCDC = "E10";      // 인천광역시교육청
+const NEIS_SCHUL = "7310207";  // 가림고등학교
+
+function ymdToday(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+}
+
+// 학번 형식 가정: [학년 1자리][반 2자리][번호 2자리] (예: 40101 -> 4학년 01반 01번)
+// 학교의 실제 학번 자릿수 규칙이 다르면 이 함수만 고치면 됨.
+function parseStudentId(id){
+  const digits = (id || '').replace(/\D/g, '');
+  if(digits.length < 5) return null;
+  const grade = digits.slice(0, 1);
+  const classNm = String(parseInt(digits.slice(1, 3), 10));
+  return { grade, classNm };
+}
+
+async function fetchMeal(dateStr){
+  try{
+    const url = `https://open.neis.go.kr/hub/mealServiceDietInfo?KEY=${NEIS_KEY}&Type=json&ATPT_OFCDC_SC_CODE=${NEIS_OFCDC}&SD_SCHUL_CODE=${NEIS_SCHUL}&MLSV_YMD=${dateStr}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const rows = data.mealServiceDietInfo?.[1]?.row;
+    if(!rows || !rows.length) return null;
+    return rows.map(r => ({
+      type: r.MMEAL_SC_NM,
+      menu: r.DDISH_NM.replace(/<br\/>/g, '\n').replace(/\d+\.?/g, '').trim()
+    }));
+  }catch(err){ console.error('급식 조회 실패', err); return null; }
+}
+
+async function fetchSchoolSchedule(dateStr){
+  try{
+    const url = `https://open.neis.go.kr/hub/SchoolSchedule?KEY=${NEIS_KEY}&Type=json&ATPT_OFCDC_SC_CODE=${NEIS_OFCDC}&SD_SCHUL_CODE=${NEIS_SCHUL}&AA_YMD=${dateStr}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    return data.SchoolSchedule?.[1]?.row?.map(r => r.EVENT_NM) || [];
+  }catch(err){ console.error('학사일정 조회 실패', err); return []; }
+}
+
+async function fetchTimetable(dateStr, grade, classNm){
+  try{
+    const url = `https://open.neis.go.kr/hub/hisTimetable?KEY=${NEIS_KEY}&Type=json&ATPT_OFCDC_SC_CODE=${NEIS_OFCDC}&SD_SCHUL_CODE=${NEIS_SCHUL}&ALL_TI_YMD=${dateStr}&GRADE=${grade}&CLASS_NM=${classNm}&pIndex=1&pSize=100`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const rows = data.hisTimetable?.[1]?.row || [];
+    return rows
+      .slice()
+      .sort((a,b) => Number(a.PERIO) - Number(b.PERIO))
+      .map(r => ({ perio: r.PERIO, subject: r.ITRT_CNTNT }));
+  }catch(err){ console.error('시간표 조회 실패', err); return []; }
+}
+
+async function renderSchoolPage(){
+  const dateStr = ymdToday();
+
+  const mealBox = document.getElementById('schoolMealBox');
+  mealBox.className = '';
+  mealBox.textContent = '불러오는 중...';
+  const meals = await fetchMeal(dateStr);
+  if(meals && meals.length){
+    mealBox.innerHTML = meals.map(m =>
+      `<div style="margin-bottom:10px;"><strong style="color:var(--accent-dark);">${escapeHtml(m.type)}</strong><br>${escapeHtml(m.menu).replace(/\n/g,'<br>')}</div>`
+    ).join('');
+  } else {
+    mealBox.className = 'empty';
+    mealBox.textContent = '오늘은 급식 정보가 없어요 (주말/방학일 수 있어요).';
+  }
+
+  const schedBox = document.getElementById('schoolScheduleBox');
+  const events = await fetchSchoolSchedule(dateStr);
+  if(events.length){
+    schedBox.innerHTML = `<ul>${events.map(e => `<li>${escapeHtml(e)}</li>`).join('')}</ul>`;
+  } else {
+    schedBox.className = 'empty';
+    schedBox.textContent = '오늘 등록된 학사일정이 없어요.';
+  }
+
+  const ttBox = document.getElementById('schoolTimetableBox');
+  const parsed = parseStudentId(STUDENT_ID);
+  if(!parsed){
+    ttBox.className = 'empty';
+    ttBox.textContent = '학번에서 학년/반을 인식하지 못했어요. (학번 형식을 확인해주세요)';
+    return;
+  }
+  const timetable = await fetchTimetable(dateStr, parsed.grade, parsed.classNm);
+  if(timetable.length){
+    ttBox.innerHTML = `<ul>${timetable.map(t => `<li>${t.perio}교시 · ${escapeHtml(t.subject)}</li>`).join('')}</ul>`;
+  } else {
+    ttBox.className = 'empty';
+    ttBox.textContent = `${parsed.grade}학년 ${parsed.classNm}반 시간표 정보가 없어요 (방학이거나 아직 등록 전일 수 있어요).`;
+  }
+}
+
+const DISPLAY_NAME_KEY = "planner_display_name"; // 로그인 폼에 학번을 미리 채워주기 위한 용도
 let STUDENT_ID = ""; // 화면 표시 + Firestore 문서 경로(students/{STUDENT_ID})로 함께 사용
 const statusEl = document.getElementById('statusText');
 const addBtn = document.getElementById('addBtn');
@@ -560,10 +697,11 @@ const addBtn = document.getElementById('addBtn');
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let tasksCol, stickersCol, notificationsCol;
+let tasksCol, stickersCol, notificationsCol, customEventsCol;
 let tasks = [];
 let stickers = [];
 let notifications = [];
+let customEvents = [];
 let dbReady = false;
 let unsubscribers = [];
 
@@ -576,7 +714,7 @@ function sanitizeStudentId(raw){
 function resetAppState(){
   unsubscribers.forEach(u=>{ try{ u(); }catch(err){} });
   unsubscribers = [];
-  tasks = []; stickers = []; notifications = [];
+  tasks = []; stickers = []; notifications = []; customEvents = [];
   dbReady = false;
   addBtn.disabled = true;
   statusEl.textContent = "연결 중...";
@@ -604,7 +742,8 @@ function readAuthForm(){
   const raw = document.getElementById('studentIdInput').value;
   const pw = document.getElementById('studentPwInput').value;
   const id = sanitizeStudentId(raw);
-  if(!id){ showAuthError('아이디를 입력해주세요.'); return null; }
+  if(!id){ showAuthError('학번을 입력해주세요.'); return null; }
+  if(!/^\d{4,}$/.test(id)){ showAuthError('학번은 숫자로만 4자리 이상 입력해주세요. (예: 40101)'); return null; }
   if(!pw || pw.length < 6){ showAuthError('비밀번호는 6자 이상 입력해주세요.'); return null; }
   return { id, pw };
 }
@@ -617,7 +756,7 @@ async function handleSignup(){
     const ref = doc(db,"students",form.id);
     const snap = await getDoc(ref);
     if(snap.exists()){
-      showAuthError('이미 사용 중인 아이디예요. [로그인]을 눌러주세요.');
+      showAuthError('이미 사용 중인 학번이에요. [로그인]을 눌러주세요.');
       return;
     }
     await setDoc(ref, { studentId: form.id, passwordHash: hashPassword(form.pw), createdAt: serverTimestamp() });
@@ -639,7 +778,7 @@ async function handleLogin(){
     const ref = doc(db,"students",form.id);
     const snap = await getDoc(ref);
     if(!snap.exists()){
-      showAuthError('가입되지 않은 아이디예요. [회원가입]을 먼저 눌러주세요.');
+      showAuthError('가입되지 않은 학번이에요. [회원가입]을 먼저 눌러주세요.');
       return;
     }
     if(snap.data().passwordHash !== hashPassword(form.pw)){
@@ -673,6 +812,7 @@ async function deleteAccountData(){
   await Promise.all(tasks.map(t=>deleteDoc(doc(db,"students",targetId,"tasks",t.id)).catch(()=>{})));
   await Promise.all(stickers.map(s=>deleteDoc(doc(db,"students",targetId,"stickers",s.id)).catch(()=>{})));
   await Promise.all(notifications.map(n=>deleteDoc(doc(db,"students",targetId,"notifications",n.id)).catch(()=>{})));
+  await Promise.all(customEvents.map(ev=>deleteDoc(doc(db,"students",targetId,"events",ev.id)).catch(()=>{})));
   await deleteDoc(doc(db,"students",targetId)).catch(()=>{});
 }
 
@@ -700,6 +840,7 @@ async function loadStudentData(studentId){
     tasksCol = collection(db, "students", studentId, "tasks");
     stickersCol = collection(db, "students", studentId, "stickers");
     notificationsCol = collection(db, "students", studentId, "notifications");
+    customEventsCol = collection(db, "students", studentId, "events");
 
     unsubscribers.push(onSnapshot(query(tasksCol, orderBy('createdAt','asc')), (snap)=>{
       tasks = snap.docs.map(d=>({ id:d.id, ...d.data() }));
@@ -716,10 +857,20 @@ async function loadStudentData(studentId){
       renderDM();
     }, (err)=>console.error(err)));
 
+    unsubscribers.push(onSnapshot(query(customEventsCol, orderBy('createdAt','asc')), (snap)=>{
+      customEvents = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      renderCalendar();
+      renderSelectedDay();
+    }, (err)=>console.error(err)));
+
     const studentSnap = await getDoc(doc(db,"students",studentId));
     if(studentSnap.exists() && studentSnap.data().stickerGoal){
       stickerGoal = studentSnap.data().stickerGoal;
       renderGoal();
+    }
+    if(studentSnap.exists() && studentSnap.data().stickerCategory){
+      stickerCategory = studentSnap.data().stickerCategory;
+      renderStickerCategoryChips();
     }
 
     dbReady = true;
@@ -756,6 +907,7 @@ document.querySelectorAll('.tab').forEach(btn=>{
     btn.classList.add('active');
     document.getElementById('page-'+btn.dataset.tab).classList.add('active');
     if(btn.dataset.tab === 'calendar') renderCalendar();
+    if(btn.dataset.tab === 'school') renderSchoolPage();
   });
 });
 
@@ -883,9 +1035,35 @@ function customConfirm(message, options={}){
 }
 
 /* ============ STICKER REWARD ============ */
+const STICKER_CATEGORIES = {
+  flower:     ["🌸","🌷","🌹","🌻","🌼","💐","🪷","🌺"],
+  dessert:    ["🍰","🍩","🍪","🧁","🍫","🍮","🍭","🍡"],
+  stationery: ["✏️","🖊️","📏","📌","🖇️","📎","🖍️","📐"],
+  dog:        ["🐶","🐕","🦮","🐩","🐾","🦴","🐕‍🦺","🐺"]
+};
+let stickerCategory = localStorage.getItem('planner_sticker_category') || 'flower';
+
+function renderStickerCategoryChips(){
+  document.querySelectorAll('#stickerCategoryRow .chip').forEach(c=>{
+    c.classList.toggle('active', c.dataset.stickercat === stickerCategory);
+  });
+}
+document.querySelectorAll('#stickerCategoryRow .chip').forEach(chip=>{
+  chip.addEventListener('click', async ()=>{
+    stickerCategory = chip.dataset.stickercat;
+    localStorage.setItem('planner_sticker_category', stickerCategory);
+    renderStickerCategoryChips();
+    if(dbReady){
+      try{ await setDoc(doc(db,"students",STUDENT_ID), { stickerCategory }, { merge:true }); }
+      catch(err){ console.error(err); }
+    }
+  });
+});
+renderStickerCategoryChips();
+
 async function awardSticker(title, taskId){
-  const STICKER_EMOJIS = ["⭐","🌟","✨","🎀","🍀","🌈","🎈","💐","🧸","🍒","🍓","🎉","🩷","🦋","🍩","🌸"];
-  const emoji = STICKER_EMOJIS[Math.floor(Math.random()*STICKER_EMOJIS.length)];
+  const pool = STICKER_CATEGORIES[stickerCategory] || STICKER_CATEGORIES.flower;
+  const emoji = pool[Math.floor(Math.random()*pool.length)];
   if(dbReady){
     try{ await addDoc(stickersCol, { emoji, taskTitle: title, taskId: taskId || null, earnedAt: serverTimestamp() }); }
     catch(err){ console.error(err); }
@@ -997,17 +1175,13 @@ function renderTasks(){
   renderTimerTaskSelect();
 }
 
-/* ============ 알림 발생 체크 (DM 알림함 기록용) ============ */
+/* ============ 알림 발생 체크 (인앱 알람 + 알림함 기록) ============ */
 function checkDeadlineAlerts(){
   if(!dbReady) return;
   tasks.filter(isUrgent).forEach(async t=>{
     if(t.notified) return;
-    if(("Notification" in window)){
-      if(Notification.permission === "default") Notification.requestPermission();
-      if(Notification.permission === "granted"){
-        new Notification("⏰ 마감 임박!", { body: `${t.title} - ${alertLabel(t.alertMinutes)} 마감입니다.` });
-      }
-    }
+    // 인앱 알람 팝업으로 바로 보여주기 (브라우저 푸시 알림 대신)
+    showTimerDoneCelebration(`⏰ 마감 임박!\n${t.title} - ${alertLabel(t.alertMinutes)} 마감입니다.`);
     try{
       await addDoc(notificationsCol, {
         taskTitle: t.title,
@@ -1034,7 +1208,7 @@ function renderDM(){
   const listEl = document.getElementById('dmList');
   const badge = document.getElementById('dmBadge');
   const sorted = [...notifications].sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
-  const unreadCount = sorted.filter(n=>!n.read).length + tasks.filter(isUrgent).length;
+  const unreadCount = sorted.filter(n=>!n.read).length;
 
   badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
   badge.classList.toggle('hidden', unreadCount === 0);
@@ -1119,10 +1293,52 @@ document.getElementById('dmMarkAllBtn').addEventListener('click', markAllNotific
 let calDate = new Date();
 let selectedDay = null;
 
+function toYmd(dateObj){
+  const pad = n => String(n).padStart(2,'0');
+  return `${dateObj.getFullYear()}${pad(dateObj.getMonth()+1)}${pad(dateObj.getDate())}`;
+}
+
+// 학사일정(월간)을 { 'YYYYMMDD': [행사명, ...] } 형태로 캐싱해서 캘린더에 표시
+let schoolEventsByDate = {};
+let schoolEventsMonthKey = null; // 'YYYY-M' 형식, 이미 불러온 달이면 재요청 안 함
+
+async function loadSchoolEventsForMonth(year, month){
+  const monthKey = `${year}-${month}`;
+  if(schoolEventsMonthKey === monthKey) return;
+  const pad = n => String(n).padStart(2,'0');
+  const fromYmd = `${year}${pad(month+1)}01`;
+  const lastDay = new Date(year, month+1, 0).getDate();
+  const toYmdStr = `${year}${pad(month+1)}${pad(lastDay)}`;
+  try{
+    const url = `https://open.neis.go.kr/hub/SchoolSchedule?KEY=${NEIS_KEY}&Type=json&ATPT_OFCDC_SC_CODE=${NEIS_OFCDC}&SD_SCHUL_CODE=${NEIS_SCHUL}&AA_FROM_YMD=${fromYmd}&AA_TO_YMD=${toYmdStr}&pIndex=1&pSize=100`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const rows = data.SchoolSchedule?.[1]?.row || [];
+    const map = {};
+    rows.forEach(r=>{
+      if(!map[r.AA_YMD]) map[r.AA_YMD] = [];
+      map[r.AA_YMD].push(r.EVENT_NM);
+    });
+    schoolEventsByDate = map;
+    schoolEventsMonthKey = monthKey;
+  }catch(err){
+    console.error('학사일정(월간) 조회 실패', err);
+    schoolEventsByDate = {};
+    schoolEventsMonthKey = null; // 실패하면 다음 렌더링 때 다시 시도
+  }
+  renderCalendar();
+  renderSelectedDay();
+}
+
+function getCustomEventsForYmd(ymd){
+  return customEvents.filter(ev => ev.date === ymd);
+}
+
 function renderCalendar(){
   const year = calDate.getFullYear();
   const month = calDate.getMonth();
   document.getElementById('calTitle').textContent = `${year}년 ${month+1}월`;
+  loadSchoolEventsForMonth(year, month); // 캐시에 없으면 비동기로 불러온 뒤 재렌더링
 
   const grid = document.getElementById('calGrid');
   grid.innerHTML = '';
@@ -1158,7 +1374,12 @@ function renderCalendar(){
       el.classList.add('selected');
     }
     const dayTasks = tasks.filter(t=> new Date(t.deadline).toDateString() === cell.dateObj.toDateString());
-    el.innerHTML = `<span>${cell.day}</span><div class="cal-dots">${dayTasks.slice(0,6).map(t=>`<span class="dot ${t.priority}"></span>`).join('')}</div>`;
+    const ymd = toYmd(cell.dateObj);
+    const neisEvents = schoolEventsByDate[ymd] || [];
+    const customDayEvents = getCustomEventsForYmd(ymd).map(ev=>ev.title);
+    const allEvents = [...neisEvents, ...customDayEvents];
+    const eventTitle = allEvents.length ? ` title="${escapeHtml(allEvents.join(', '))}"` : '';
+    el.innerHTML = `<span${eventTitle}>${cell.day}${allEvents.length ? ' 🏫' : ''}</span><div class="cal-dots">${dayTasks.slice(0,6).map(t=>`<span class="dot ${t.priority}"></span>`).join('')}</div>`;
     el.addEventListener('click', ()=>{
       selectedDay = cell.dateObj;
       renderCalendar();
@@ -1178,11 +1399,51 @@ function renderSelectedDay(){
   }
   titleEl.textContent = `${selectedDay.getMonth()+1}월 ${selectedDay.getDate()}일 할 일`;
   const dayTasks = sortedTasks(tasks.filter(t=>new Date(t.deadline).toDateString() === selectedDay.toDateString()));
-  listEl.innerHTML = dayTasks.length ? dayTasks.map(t=>{
+  const ymd = toYmd(selectedDay);
+  const dayEvents = schoolEventsByDate[ymd] || [];
+  const dayCustomEvents = getCustomEventsForYmd(ymd);
+
+  const eventsHtml = dayEvents.map(e =>
+    `<li style="margin-bottom:6px;color:var(--accent-dark);font-weight:700;">🏫 ${escapeHtml(e)}</li>`
+  ).join('');
+  const customEventsHtml = dayCustomEvents.map(ev =>
+    `<li style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--accent-dark);font-weight:700;">
+      <span>📌 ${escapeHtml(ev.title)}</span>
+      <button class="delBtn" data-delcustomevent="${ev.id}" title="삭제" style="font-size:13px;">✕</button>
+    </li>`
+  ).join('');
+  const tasksHtml = dayTasks.map(t=>{
     const d = new Date(t.deadline);
     return `<li style="margin-bottom:6px;">${t.completed?'✅':'⬜'} ${escapeHtml(t.title)} <span style="color:var(--muted);font-size:12px;">(${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')})</span></li>`;
-  }).join('') : '<p class="empty">이 날짜에 등록된 할 일이 없어요.</p>';
+  }).join('');
+
+  listEl.innerHTML = (eventsHtml + customEventsHtml + tasksHtml) || '<p class="empty">이 날짜에 등록된 학사일정/할 일이 없어요.</p>';
+  listEl.querySelectorAll('[data-delcustomevent]').forEach(btn=>{
+    btn.addEventListener('click', ()=> deleteCustomEvent(btn.dataset.delcustomevent));
+  });
 }
+
+async function addCustomEvent(){
+  if(!dbReady){ return; }
+  if(!selectedDay){
+    alert('먼저 캘린더에서 날짜를 선택해주세요.');
+    return;
+  }
+  const input = document.getElementById('customEventInput');
+  const title = input.value.trim();
+  if(!title) return;
+  try{
+    await addDoc(customEventsCol, { title, date: toYmd(selectedDay), createdAt: serverTimestamp() });
+    input.value = '';
+  }catch(err){ console.error(err); }
+}
+async function deleteCustomEvent(id){
+  if(!dbReady) return;
+  try{ await deleteDoc(doc(db,"students",STUDENT_ID,"events",id)); }
+  catch(err){ console.error(err); }
+}
+document.getElementById('customEventAddBtn').addEventListener('click', addCustomEvent);
+document.getElementById('customEventInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); addCustomEvent(); } });
 
 document.getElementById('prevMonth').addEventListener('click', ()=>{
   calDate = new Date(calDate.getFullYear(), calDate.getMonth()-1, 1);
@@ -1295,7 +1556,7 @@ function renderAll(){
   checkDeadlineAlerts();
 }
 
-setInterval(()=>{ renderTasks(); renderDM(); }, 60000);
+setInterval(()=>{ renderTasks(); renderDM(); checkDeadlineAlerts(); }, 60000);
 
 (function setDefaultDeadline(){
   const dt = new Date(Date.now() + 24*3600000);
@@ -1307,7 +1568,18 @@ setInterval(()=>{ renderTasks(); renderDM(); }, 60000);
 
 document.getElementById('inStartTime').addEventListener('change', (e)=>{
   const deadlineInput = document.getElementById('inDeadline');
-  deadlineInput.min = e.target.value || '';
+  const startVal = e.target.value;
+  deadlineInput.min = startVal || '';
+  if(startVal){
+    const start = new Date(startVal);
+    let end = new Date(start.getTime() + 60*60000); // 시작 시간 + 1시간
+    // 자정을 넘기면 시작 시간과 같은 날 23:59로 맞춰줌
+    if(end.toDateString() !== start.toDateString()){
+      end = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59);
+    }
+    const pad = n => String(n).padStart(2,'0');
+    deadlineInput.value = `${end.getFullYear()}-${pad(end.getMonth()+1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}`;
+  }
 });
 
 /* ============ TIMER (뽀모도로 / 기본 타이머) ============ */
