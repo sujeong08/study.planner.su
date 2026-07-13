@@ -512,8 +512,8 @@
 <div id="studentIdOverlay">
   <div id="studentIdCard">
     <h3 class="hand" style="margin:0 0 6px;">👋 반가워요!</h3>
-    <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">이름이나 학번, 비밀번호를 입력하면<br>나만의 할 일이 안전하게 저장돼요.</p>
-    <input id="studentIdInput" type="text" placeholder="예: 홍길동 또는 30214" autocomplete="username" />
+    <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">아이디와 비밀번호를 입력하면<br>나만의 할 일이 안전하게 저장돼요.</p>
+    <input id="studentIdInput" type="text" placeholder="아이디" autocomplete="username" />
     <input id="studentPwInput" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;background:var(--bg);color:var(--ink);margin-bottom:10px;" />
     <p id="authErrorText" style="display:none;color:var(--danger);font-size:12.5px;margin:0 0 10px;text-align:left;"></p>
     <div style="display:flex;gap:8px;">
@@ -552,7 +552,7 @@ function hashPassword(str){
   return 'h' + h.toString(36);
 }
 
-const DISPLAY_NAME_KEY = "planner_display_name"; // 로그인 폼에 이름을 미리 채워주기 위한 용도
+const DISPLAY_NAME_KEY = "planner_display_name"; // 로그인 폼에 아이디를 미리 채워주기 위한 용도
 let STUDENT_ID = ""; // 화면 표시 + Firestore 문서 경로(students/{STUDENT_ID})로 함께 사용
 const statusEl = document.getElementById('statusText');
 const addBtn = document.getElementById('addBtn');
@@ -604,8 +604,8 @@ function readAuthForm(){
   const raw = document.getElementById('studentIdInput').value;
   const pw = document.getElementById('studentPwInput').value;
   const id = sanitizeStudentId(raw);
-  if(!id){ showAuthError('이름이나 학번을 입력해주세요.'); return null; }
-  if(!pw || pw.length < 4){ showAuthError('비밀번호는 4자 이상 입력해주세요.'); return null; }
+  if(!id){ showAuthError('아이디를 입력해주세요.'); return null; }
+  if(!pw || pw.length < 6){ showAuthError('비밀번호는 6자 이상 입력해주세요.'); return null; }
   return { id, pw };
 }
 
@@ -617,7 +617,7 @@ async function handleSignup(){
     const ref = doc(db,"students",form.id);
     const snap = await getDoc(ref);
     if(snap.exists()){
-      showAuthError('이미 사용 중인 이름/학번이에요. [로그인]을 눌러주세요.');
+      showAuthError('이미 사용 중인 아이디예요. [로그인]을 눌러주세요.');
       return;
     }
     await setDoc(ref, { studentId: form.id, passwordHash: hashPassword(form.pw), createdAt: serverTimestamp() });
@@ -639,7 +639,7 @@ async function handleLogin(){
     const ref = doc(db,"students",form.id);
     const snap = await getDoc(ref);
     if(!snap.exists()){
-      showAuthError('가입되지 않은 이름/학번이에요. [회원가입]을 먼저 눌러주세요.');
+      showAuthError('가입되지 않은 아이디예요. [회원가입]을 먼저 눌러주세요.');
       return;
     }
     if(snap.data().passwordHash !== hashPassword(form.pw)){
